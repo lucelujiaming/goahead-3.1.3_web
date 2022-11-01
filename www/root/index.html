@@ -1,0 +1,287 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+
+<link rel="shortcut icon" href="favicon.ico"/>
+<link type="text/css" href="css/widget.css" rel="stylesheet" />
+
+<link type="text/css" href="themes/neoteric/css/widget.css" rel="stylesheet" />
+<link type="text/css" href="themes/neoteric/css/style.css" rel="stylesheet" />
+
+<script type="text/javascript" src="js/zepto.js"></script>
+<script type="text/javascript">
+var filestatus = 1;
+var checkFileName = function() {
+    var fname = $("#filename")[0].innerText;
+    if (!fname || fname.length == 0) {
+        filestatus = 1;
+    } else if (/^firmware[-_0-9a-zA-Z.]+$/.test(fname)) {
+        filestatus = 0;
+    } else {
+        filestatus = 2;
+        $("div.error-tips-content").html("文件名错误");
+        $("div.widget-error-tips").css("display", "block");
+    }
+};
+var funs = {};
+funs["su"] = function() {
+    $("button#broswer").on("click", function(e){
+        $("div.widget-error-tips").css("display", "none");
+        $("#file").click();
+    });
+    $("button#upgrade").on("click", function(e){
+        if (filestatus == 0)
+        {
+            $("#firmware-setting").submit();
+            $("#loading-text").html("上传中...");
+            $("div.loading-container#loading-container").css("display", "block");
+            $("div.mask#mask").css("display", "block");
+            var updateStatus = function() {
+                $.get("/action/status", function(_data, _status){
+                    var data_json = JSON.parse(_data);
+                    if (data_json.length == 1) {
+                        var info = data_json[0];
+                        if (info.status && "upgrade" == info.status) {
+                            if (info.upgradestatus && "error" == info.upgradestatus) {
+                                $("div.loading-container#loading-container").css("display", "none");
+                                $("div.mask#mask").css("display", "none");
+                                if (info.code) {
+                                    if (info.code == 0) {
+                                        $("div.error-tips-content").html("校验错误");
+                                    } else if (info.code == 1) {
+                                        $("div.error-tips-content").html("不能降级");
+                                    } else if (info.code == 2) {
+                                        $("div.error-tips-content").html("版本相同无需升级");
+                                    } else if (info.code == 3) {
+                                        $("div.error-tips-content").html("内部错误");
+                                    } else {
+                                        $("div.error-tips-content").html("内部错误");
+                                    }
+                                    $("div.widget-error-tips").css("display", "block");
+                                }
+                            } else {
+                                if ("check" == info.upgradestatus) {
+                                    $("#loading-text").html("校验中...");
+                                    setTimeout(updateStatus, 1000);
+                                } else if ("upgrade" == info.upgradestatus) {
+                                    $("#loading-text").html("升级中...");
+                                    setTimeout(updateStatus, 1000);
+                                } else if ("reboot" == info.upgradestatus) {
+                                    $.get("/action/status?mode=reboot", function(_data, _status){});
+                                    $("#loading-text").html("重启中...");
+                                    setTimeout("javascript:location.href='index.html';location.reload();", 15000);
+                                }
+                            }
+                        } else {
+                            setTimeout(updateStatus, 1000);
+                        }
+                    }
+                });
+            };
+            var waitforUploadDone = function() {
+                $.get("/action/status", function(_data, _status){
+                    var data_json = JSON.parse(_data);
+                    if (data_json.length == 1) {
+                        var info = data_json[0];
+                        if (info.status && "upgrade" == info.status) {
+                            $("#loading-text").html("上传成功");
+                            updateStatus();
+                        } else {
+                            setTimeout(waitforUploadDone, 1000);
+                        }
+                    }
+                });
+            }
+            $.get("/action/status?mode=upload", function(_data, _status){});
+            waitforUploadDone();
+        }
+        else if (filestatus == 1)
+        {
+            $("div.error-tips-content").html("请选择一个文件");
+            $("div.widget-error-tips").css("display", "block");
+        }
+    });
+    $.get("/action/status?mode=init", function(_data, _status){
+        var data_json = JSON.parse(_data);
+        $.each(data_json, function(index, info){
+            if (info.version && $("#software_version").length > 0) {
+                $("#software_version").attr("value", info.version);
+            }
+            if (info.buildtime && $("#software_time").length > 0) {
+                var date = new Date(parseInt(info.buildtime) * 1000);
+                var dateStr = date.getFullYear() + '-' + (date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '-' + (date.getDate() < 10 ? '0' + date.getDate() : date.getDate()) + ' ' + (date.getHours() < 10 ? '0' + date.getHours() : date.getHours()) + ':' + (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()) + ':' + (date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getSeconds());
+                $("#software_time").attr("value", dateStr);
+            }
+        });
+    });
+};
+var updateContent = function(url, fun) {
+    var req = false;
+    if (window.XMLHttpRequest) {
+        try {
+            req = new XMLHttpRequest();
+        } catch (e) {
+            req = false;
+        }
+    } else if (window.ActiveXObject) {
+        try {
+            req = new ActiveXObject("Msxml2.XMLHTTP");
+        } catch (e) {
+            try {
+                req = new ActiveXObject("Microsoft.XMLHTTP");
+            } catch (e) {
+                req = false;
+            }
+        }
+    }
+    if (req) {
+        req.open('GET', url, false);
+        req.send(null);
+        $("#func-advanced").html(req.responseText);
+        if (funs[fun]) {
+            funs[fun]();
+        }
+    } else {
+        $("#func-advanced").html("Inner Error !");
+    }
+};
+$(document).ready(function(e){
+    var container = $("div#menu-advanced");
+    container.delegate("ul.menu-tree li.fst a.fst", "click", function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var me = $(this), url = me.attr("ref-url"), fun = me.attr("ifun");
+            var fstMenuList = $("li.fst");
+            $(fstMenuList).each(function(i, obj) {
+                    var that = $(obj);
+                    that.removeClass("selected")
+                });
+            fstMenuList = $("a.fst");
+            $(fstMenuList).each(function(i, obj) {
+                    var that = $(obj);
+                    that.removeClass("selected")
+                });
+            if (me.attr("data-child") == "no") {
+                updateContent(url, fun);
+                me.addClass("selected");
+                me.closest("li.fst").addClass("selected");
+            } else {
+            }
+        }).delegate("ul.menu-tree li.sec a.sec", "click", function(e) {
+        });
+    // 隐藏显示加载图标
+    $("div.loading-container#loading-container").css("display", "none");
+    $("div.mask#mask").css("display", "none")
+    document.title = "CMP500";
+    updateContent("pages/system_state.html", "none");
+});
+</script>
+
+<title>Opening...</title>
+</head>
+<body>
+<noscript>
+	<meta http-equiv="refresh" content="0; url=error.html"/>
+</noscript>
+
+<!--主界面-->
+<!--顶部颜色条-->
+<div class="top-banner">
+    <div class="control">
+        <div class="logout">
+            <span class="icon"></span>
+            <span class="text">登出</span>
+        </div>
+        <div class="user">
+            <span class="icon"></span>
+            <span class="text">用户</span>
+        </div>
+    </div>
+    
+    <a href="http://www.xungaoauto.com.cn" target="_blank">
+        <div class="top-banner-logo"></div>
+    </a>
+    
+    <div class="product-info">
+        <h1>|</h1>
+        <div id="product-type">CMP500</div>
+    </div>
+</div>
+
+<div class="middle-wrap">
+    <div class="main-wrap">
+		<div class="top-content">
+			<div class="top-content-wrap" id="top-content">
+				<div id="menu-advanced" class="menu-container">
+					<ul class="menu-tree advanced">
+					<li class="fst selected" id="menu-advanced-running-status-li"><a class="fst none-sec selected" data-child="no" data-name="running-status" name="running-status" tab-id="tab-menu-ul-1010746721" ref-url="pages/system_state.html" ifun="ss"><span class="icon"></span><span class="text">运行状态</span></a></li>
+					<li class="fst" id="menu-advanced-sys-tools-li"><a class="fst none-sec" data-child="no" data-name="system-mgnt" name="system-mgnt" tab-id="tab-menu-ul-1559772315" ref-url="pages/system_upgrade.html" ifun="su"><span class="icon"></span><span class="text">系统升级</span></a></li>
+                    <!--
+					<li class="fst" id="menu-advanced-device-mgnt-li"><a class="fst none-sec" id="device-mgnt" data-child="no" data-name="device-mgnt" name="device-mgnt" tab-id="tab-menu-ul-1559772315"><span class="icon"></span><span class="text">终端管理</span></a></li>
+					<li class="fst" id="menu-advanced-basic-setting-li"><a class="fst" id="basic-setting" data-child="yes" data-name="basic-setting" name="basic-setting"><span class="icon"></span><span class="text">基本设置</span></a><div class="menu-sec-wrap"><ul class="sec hidden" style="display: none;"><li class="sec sec-fst"><a class="sec" data-name="interface-mode" name="interface-mode" tab-id="tab-menu-ul-7507727137"><span class="selected-tag"></span><span class="text">接口模式</span></a></li><li class="sec "><a class="sec" data-name="wan-setting" name="wan-setting" tab-id="tab-menu-ul-6202319232"><span class="selected-tag"></span><span class="text">WAN设置</span></a></li><li class="sec sec-lst"><a class="sec" data-name="lan-settings" name="lan-settings" tab-id="tab-menu-ul-5464632311"><span class="selected-tag"></span><span class="text">LAN设置</span></a></li></ul></div></li>
+					<li class="fst" id="menu-advanced-wireless-li"><a class="fst" id="wireless" data-child="yes" data-name="wireless" name="wireless"><span class="icon"></span><span class="text">无线设置</span></a><div class="menu-sec-wrap"><ul class="sec hidden" style=""><li class="sec sec-fst"><a class="sec" data-name="wireless-2-4g" name="wireless-2-4g" tab-id="tab-menu-ul-8820891328"><span class="selected-tag"></span><span class="text">2.4G无线设置</span></a></li><li class="sec "><a class="sec" data-name="wireless-5g" name="wireless-5g" tab-id="tab-menu-ul-4590908436"><span class="selected-tag"></span><span class="text">5G无线设置</span></a></li><li class="sec "><a class="sec" data-name="wireless-visitor" name="wireless-visitor" tab-id="tab-menu-ul-4683228599"><span class="selected-tag"></span><span class="text">访客网络</span></a></li><li class="sec "><a class="sec" data-name="wireless-mac" name="wireless-mac" tab-id="tab-menu-ul-3449203195"><span class="selected-tag"></span><span class="text">MAC地址过滤</span></a></li><li class="sec sec-lst"><a class="sec" data-name="wireless-host" name="wireless-host" tab-id="tab-menu-ul-3154898283"><span class="selected-tag"></span><span class="text">无线主机状态</span></a></li></ul></div></li>
+					<li class="fst" id="menu-advanced-ap-manager-li"><a class="fst" id="ap-manager" data-child="yes" data-name="ap-manager" name="ap-manager"><span class="icon"></span><span class="text">AP管理</span></a><div class="menu-sec-wrap"><ul class="sec hidden" style=""><li class="sec sec-fst"><a class="sec" data-name="ap-setting" name="ap-setting" tab-id="tab-menu-ul-2477628252"><span class="selected-tag"></span><span class="text">AP设置</span></a></li><li class="sec sec-lst"><a class="sec" data-name="ap-wireless" name="ap-wireless" tab-id="tab-menu-ul-7588755702"><span class="selected-tag"></span><span class="text">无线网络设置</span></a></li></ul></div></li>
+					<li class="fst" id="menu-advanced-behavior-control-li"><a class="fst" id="behavior-control" data-child="yes" data-name="behavior-control" name="behavior-control"><span class="icon"></span><span class="text">行为管控</span></a><div class="menu-sec-wrap"><ul class="sec hidden" style=""><li class="sec sec-fst"><a class="sec" data-name="ip-group" name="ip-group" tab-id="tab-menu-ul-6628272927"><span class="selected-tag"></span><span class="text">地址管理</span></a></li><li class="sec "><a class="sec" data-name="time-mngt" name="time-mngt" tab-id="tab-menu-ul-6142128663"><span class="selected-tag"></span><span class="text">时间管理</span></a></li><li class="sec "><a class="sec" data-name="appdist" name="appdist" tab-id="tab-menu-ul-3737156890"><span class="selected-tag"></span><span class="text">应用控制</span></a></li><li class="sec "><a class="sec" data-name="websiteFilter" name="websiteFilter" tab-id="tab-menu-ul-3102194731"><span class="selected-tag"></span><span class="text">网站访问</span></a></li><li class="sec "><a class="sec" data-name="websiteSecurity" name="websiteSecurity" tab-id="tab-menu-ul-8801664046"><span class="selected-tag"></span><span class="text">文件下载</span></a></li><li class="sec "><a class="sec" data-name="qos" name="qos" tab-id="tab-menu-ul-1057031998"><span class="selected-tag"></span><span class="text">带宽限制</span></a></li><li class="sec sec-lst"><a class="sec" data-name="access-control" name="access-control" tab-id="tab-menu-ul-6397724568"><span class="selected-tag"></span><span class="text">访问控制</span></a></li></ul></div></li>
+					<li class="fst" id="menu-advanced-firewall-li"><a class="fst" id="firewall" data-child="yes" data-name="firewall" name="firewall"><span class="icon"></span><span class="text">安全管理</span></a><div class="menu-sec-wrap"><ul class="sec hidden" style=""><li class="sec sec-fst"><a class="sec" data-name="arp-defense" name="arp-defense" tab-id="tab-menu-ul-9228973782"><span class="selected-tag"></span><span class="text">ARP防护</span></a></li><li class="sec "><a class="sec" data-name="macFiltering" name="macFiltering" tab-id="tab-menu-ul-2104937408"><span class="selected-tag"></span><span class="text">MAC地址过滤</span></a></li><li class="sec sec-lst"><a class="sec" data-name="attack-defense" name="attack-defense" tab-id="tab-menu-ul-1854090647"><span class="selected-tag"></span><span class="text">攻击防护</span></a></li></ul></div></li>
+					<li class="fst" id="menu-advanced-vpn-li"><a class="fst none-sec" id="vpn" data-child="no" data-name="vpn" name="vpn" tab-id="tab-menu-ul-3900302021"><span class="icon"></span><span class="text">VPN</span></a></li>
+					<li class="fst" id="menu-advanced-newportal-li"><a class="fst" id="newportal" data-child="yes" data-name="newportal" name="newportal"><span class="icon"></span><span class="text">认证管理</span></a><div class="menu-sec-wrap"><ul class="sec hidden" style=""><li class="sec sec-fst"><a class="sec" data-name="wportal" name="wportal" tab-id="tab-menu-ul-3023684033"><span class="selected-tag"></span><span class="text">Web认证</span></a></li><li class="sec "><a class="sec" data-name="wechat" name="wechat" tab-id="tab-menu-ul-924642351"><span class="selected-tag"></span><span class="text">微信连Wi-Fi</span></a></li><li class="sec "><a class="sec" data-name="sms" name="sms" tab-id="tab-menu-ul-9134043096"><span class="selected-tag"></span><span class="text">短信认证</span></a></li><li class="sec "><a class="sec" data-name="free" name="free" tab-id="tab-menu-ul-7556249196"><span class="selected-tag"></span><span class="text">免认证策略</span></a></li><li class="sec sec-lst"><a class="sec" data-name="sessmngr" name="sessmngr" tab-id="tab-menu-ul-9658711999"><span class="selected-tag"></span><span class="text">认证状态</span></a></li></ul></div></li>
+					<li class="fst" id="menu-advanced-advanced-li"><a class="fst" id="advanced" data-child="yes" data-name="advanced" name="advanced"><span class="icon"></span><span class="text">高级功能</span></a><div class="menu-sec-wrap"><ul class="sec hidden" style=""><li class="sec sec-fst"><a class="sec" data-name="route" name="route" tab-id="tab-menu-ul-9568632556"><span class="selected-tag"></span><span class="text">路由设置</span></a></li><li class="sec "><a class="sec" data-name="nat" name="nat" tab-id="tab-menu-ul-4472302728"><span class="selected-tag"></span><span class="text">NAT设置</span></a></li><li class="sec "><a class="sec" data-name="virtual-server" name="virtual-server" tab-id="tab-menu-ul-6005857136"><span class="selected-tag"></span><span class="text">虚拟服务器</span></a></li><li class="sec "><a class="sec" data-name="ddns" name="ddns" tab-id="tab-menu-ul-4159577497"><span class="selected-tag"></span><span class="text">动态DNS</span></a></li><li class="sec "><a class="sec" data-name="upnp" name="upnp" tab-id="tab-menu-ul-263973423"><span class="selected-tag"></span><span class="text">UPnP</span></a></li><li class="sec "><a class="sec" data-name="print-server" name="print-server" tab-id="tab-menu-ul-9585105897"><span class="selected-tag"></span><span class="text">打印服务器</span></a></li><li class="sec "><a class="sec" data-name="storage-share" name="storage-share" tab-id="tab-menu-ul-5224514557"><span class="selected-tag"></span><span class="text">文件共享</span></a></li><li class="sec "><a class="sec" data-name="ip-stat" name="ip-stat" tab-id="tab-menu-ul-7497669231"><span class="selected-tag"></span><span class="text">IP流量统计</span></a></li><li class="sec sec-lst"><a class="sec" data-name="port-monitor" name="port-monitor" tab-id="tab-menu-ul-2288596634"><span class="selected-tag"></span><span class="text">端口监控</span></a></li></ul></div></li>
+					<li class="fst" id="menu-advanced-sys-tools-li"><a class="fst" id="sys-tools" data-child="yes" data-name="sys-tools" name="sys-tools"><span class="icon"></span><span class="text">系统工具</span></a><div class="menu-sec-wrap"><ul class="sec hidden" style=""><li class="sec sec-fst"><a class="sec" data-name="firmware" name="firmware" tab-id="tab-menu-ul-6260178262"><span class="selected-tag"></span><span class="text">设备管理</span></a></li><li class="sec "><a class="sec" data-name="diagnostic" name="diagnostic" tab-id="tab-menu-ul-9112154783"><span class="selected-tag"></span><span class="text">诊断工具</span></a></li><li class="sec "><a class="sec" data-name="time-setting" name="time-setting" tab-id="tab-menu-ul-2131204006"><span class="selected-tag"></span><span class="text">时间设置</span></a></li><li class="sec "><a class="sec" data-name="system-log" name="system-log" tab-id="tab-menu-ul-3451994096"><span class="selected-tag"></span><span class="text">系统日志</span></a></li><li class="sec sec-lst"><a class="sec" data-name="account-mngt" name="account-mngt" tab-id="tab-menu-ul-1672245581"><span class="selected-tag"></span><span class="text">系统管理</span></a></li></ul></div></li>
+                    -->
+					</ul>
+				</div>
+                <div id="func-advanced" class="function-container"></div>
+			</div>
+		</div><!-- top-content -->
+		
+
+<!--遮蔽层-->
+<div id="mask" class="mask"></div>
+<!--loading-->
+<div class="loading-container" id="loading-container">
+	<div class="loading-container-wrap">
+        <span class="text" id="loading-text" style="position: absolute; left: 2px; bottom: 2px; color: #FFFFFF;"></span>
+		<div class="loading-container-inner">
+			<div class="loading-waiting-icon"></div>
+		</div>
+	</div>
+</div>
+
+<!-- 登出的确认 -->
+
+<div id="logout_confirm_msg" class="hidden warning">
+	<div class="reboot-confirm-qa">
+		<h4 class="title">
+			<span class="icon"></span>
+			<span class="text" id="logout_confirm_msg_text"></span>
+		</h4>
+	</div>
+</div>
+
+<!-- 用户账户修改 -->
+<div id="user-modify-msg" class="hidden warning">
+	<form id="user-modify-form">
+		<input type="text"  id="old_acc" name="old_acc" value="" />
+    	<input type="password"  id="old_pwd" name="old_pwd" value="" />
+		<input type="text"  id="new_acc" name="new_acc" value="" />
+    	<input type="password"  id="new_pwd" name="new_pwd" value="" />
+		<input type="password"  id="cfm_pwd" name="cfm_pwd" value="" />
+		<input id="pwd_status"  value="" />
+	</form>
+	<button type="button" id="user-modify-btn"></button>
+</div>
+
+<!--全局警告提示框-->
+<div id="global-warning-msg" class="hidden warning">
+	<h4 class="title">
+		<span class="icon"></span>
+		<span class="text" id="global-warning-text"></span>
+	</h4>
+</div>
+</div>
+</div>
+
+</body>
+</html>
