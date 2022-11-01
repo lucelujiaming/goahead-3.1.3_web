@@ -160,6 +160,7 @@ clean:
 	rm -f "$(CONFIG)/obj/test.o"
 	rm -f "$(CONFIG)/obj/gopass.o"
 	rm -f "$(CONFIG)/obj/user.o"
+	rm -f "$(CONFIG)/obj/cJSON.o"
 
 clobber: clean
 	rm -fr ./$(CONFIG)
@@ -247,6 +248,14 @@ $(CONFIG)/inc/js.h: $(DEPS_9)
 	@echo '      [Copy] $(CONFIG)/inc/js.h'
 	mkdir -p "$(CONFIG)/inc"
 	cp src/js.h $(CONFIG)/inc/js.h
+
+#
+#   cJSON.h
+#
+$(CONFIG)/inc/cJSON.h:
+	@echo '      [Copy] $(CONFIG)/inc/cJSON.h'
+	mkdir -p "$(CONFIG)/inc"
+	cp src/cJSON.h $(CONFIG)/inc/cJSON.h
 
 #
 #   action.o
@@ -360,6 +369,17 @@ $(CONFIG)/obj/jst.o: \
     src/jst.c $(DEPS_19)
 	@echo '   [Compile] $(CONFIG)/obj/jst.o'
 	$(CC) -c -o $(CONFIG)/obj/jst.o $(CFLAGS) $(DFLAGS) $(IFLAGS) "-I$(BIT_PACK_MATRIXSSL_PATH)" "-I$(BIT_PACK_MATRIXSSL_PATH)/matrixssl" "-I$(BIT_PACK_NANOSSL_PATH)/src" "-I$(BIT_PACK_OPENSSL_PATH)/include" src/jst.c
+
+#
+#   cJSON.o
+#
+
+$(CONFIG)/obj/cJSON.o: \
+    src/cJSON.c
+	@echo '   [Compile] $(CONFIG)/obj/cJSON.o'
+	$(CC) -c -o $(CONFIG)/obj/cJSON.o $(CFLAGS) $(DFLAGS) $(IFLAGS) "-I$(BIT_PACK_MATRIXSSL_PATH)" "-I$(BIT_PACK_MATRIXSSL_PATH)/matrixssl" "-I$(BIT_PACK_NANOSSL_PATH)/src" "-I$(BIT_PACK_OPENSSL_PATH)/include" src/cJSON.c
+
+
 
 #
 #   options.o
@@ -505,6 +525,7 @@ DEPS_31 += $(CONFIG)/obj/fs.o
 DEPS_31 += $(CONFIG)/obj/http.o
 DEPS_31 += $(CONFIG)/obj/js.o
 DEPS_31 += $(CONFIG)/obj/jst.o
+DEPS_31 += $(CONFIG)/obj/cJSON.o
 DEPS_31 += $(CONFIG)/obj/options.o
 DEPS_31 += $(CONFIG)/obj/osdep.o
 DEPS_31 += $(CONFIG)/obj/rom-documents.o
@@ -519,7 +540,7 @@ DEPS_31 += $(CONFIG)/obj/openssl.o
 
 $(CONFIG)/bin/libgo.a: $(DEPS_31)
 	@echo '      [Link] $(CONFIG)/bin/libgo.a'
-	ar -cr $(CONFIG)/bin/libgo.a "$(CONFIG)/obj/action.o" "$(CONFIG)/obj/alloc.o" "$(CONFIG)/obj/auth.o" "$(CONFIG)/obj/cgi.o" "$(CONFIG)/obj/crypt.o" "$(CONFIG)/obj/file.o" "$(CONFIG)/obj/fs.o" "$(CONFIG)/obj/http.o" "$(CONFIG)/obj/js.o" "$(CONFIG)/obj/jst.o" "$(CONFIG)/obj/options.o" "$(CONFIG)/obj/osdep.o" "$(CONFIG)/obj/rom-documents.o" "$(CONFIG)/obj/route.o" "$(CONFIG)/obj/runtime.o" "$(CONFIG)/obj/socket.o" "$(CONFIG)/obj/upload.o" "$(CONFIG)/obj/est.o" "$(CONFIG)/obj/matrixssl.o" "$(CONFIG)/obj/nanossl.o" "$(CONFIG)/obj/openssl.o"
+	ar -cr $(CONFIG)/bin/libgo.a "$(CONFIG)/obj/action.o" "$(CONFIG)/obj/alloc.o" "$(CONFIG)/obj/auth.o" "$(CONFIG)/obj/cgi.o" "$(CONFIG)/obj/crypt.o" "$(CONFIG)/obj/file.o" "$(CONFIG)/obj/fs.o" "$(CONFIG)/obj/http.o" "$(CONFIG)/obj/js.o" "$(CONFIG)/obj/jst.o" "$(CONFIG)/obj/cJSON.o" "$(CONFIG)/obj/options.o" "$(CONFIG)/obj/osdep.o" "$(CONFIG)/obj/rom-documents.o" "$(CONFIG)/obj/route.o" "$(CONFIG)/obj/runtime.o" "$(CONFIG)/obj/socket.o" "$(CONFIG)/obj/upload.o" "$(CONFIG)/obj/est.o" "$(CONFIG)/obj/matrixssl.o" "$(CONFIG)/obj/nanossl.o" "$(CONFIG)/obj/openssl.o"
 
 #
 #   goahead.o
@@ -565,6 +586,7 @@ DEPS_33 += $(CONFIG)/obj/fs.o
 DEPS_33 += $(CONFIG)/obj/http.o
 DEPS_33 += $(CONFIG)/obj/js.o
 DEPS_33 += $(CONFIG)/obj/jst.o
+DEPS_33 += $(CONFIG)/obj/cJSON.o
 DEPS_33 += $(CONFIG)/obj/options.o
 DEPS_33 += $(CONFIG)/obj/osdep.o
 DEPS_33 += $(CONFIG)/obj/rom-documents.o
@@ -641,6 +663,7 @@ DEPS_35 += $(CONFIG)/obj/http.o
 DEPS_35 += $(CONFIG)/obj/js.o
 DEPS_35 += $(CONFIG)/obj/jst.o
 DEPS_35 += $(CONFIG)/obj/cJSON.o
+DEPS_35 += $(CONFIG)/obj/cJSON.o
 DEPS_35 += $(CONFIG)/obj/options.o
 DEPS_35 += $(CONFIG)/obj/osdep.o
 DEPS_35 += $(CONFIG)/obj/rom-documents.o
@@ -714,6 +737,7 @@ DEPS_37 += $(CONFIG)/obj/fs.o
 DEPS_37 += $(CONFIG)/obj/http.o
 DEPS_37 += $(CONFIG)/obj/js.o
 DEPS_37 += $(CONFIG)/obj/jst.o
+DEPS_37 += $(CONFIG)/obj/cJSON.o
 DEPS_37 += $(CONFIG)/obj/cJSON.o
 DEPS_37 += $(CONFIG)/obj/options.o
 DEPS_37 += $(CONFIG)/obj/osdep.o
