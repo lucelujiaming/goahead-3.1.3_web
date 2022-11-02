@@ -11,91 +11,80 @@
 <link type="text/css" href="themes/neoteric/css/style.css" rel="stylesheet" />
 
 <script type="text/javascript" src="js/zepto.js"></script>
+
+<script type="text/javascript" src="js/ajaxfileupload.js"></script>
+<script type="text/javascript" src="js/ajaxbasic.js"></script>
+
 <script type="text/javascript">
 var filestatus = 1;
 var checkFileName = function() {
     var fname = $("#filename")[0].innerText;
     if (!fname || fname.length == 0) {
         filestatus = 1;
-    } else if (/^firmware[-_0-9a-zA-Z.]+$/.test(fname)) {
+    } else if (fname == "app.sab") {
+        filestatus = 0;
+    } else if (fname == "app.scode") {
         filestatus = 0;
     } else {
         filestatus = 2;
-        $("div.error-tips-content").html("文件名错误");
+        $("div.error-tips-content").html("必须是app.sab和app.scode文件");
         $("div.widget-error-tips").css("display", "block");
     }
 };
+
+function fileUpload()
+{
+    var id = "file";
+	alert("ajaxFileUpload");
+    $.ajaxFileUpload
+    (
+         {
+            url:'/action/uploadProc',
+            secureuri:false,
+            fileElementId:id,
+            dataType:'xml',
+            data:{ upFile:'firmware',localurl:'/file-upload.asp',token:gettk() },
+            success: function (data, status)
+            {
+				$("div.loading-container#loading-container").css("display", "none");
+                $("div.mask#mask").css("display", "none");
+                // clearTimeout(timeoutProcess);
+                $("#file").val('');
+				alert("success");
+
+            },
+            error: function (data, status, e)
+            {
+                // clearTimeout(timeoutProcess);
+                $("#file").val('');
+				$("div.loading-container#loading-container").css("display", "none");
+                $("div.mask#mask").css("display", "none");
+                alert("Upload firmware failed.");
+            }
+        }
+    )
+	alert("ajaxFileUpload Over");
+
+    return false;
+}
+
 var funs = {};
 funs["su"] = function() {
+    // 浏览
     $("button#broswer").on("click", function(e){
         $("div.widget-error-tips").css("display", "none");
         $("#file").click();
     });
+	// 升级
     $("button#upgrade").on("click", function(e){
         if (filestatus == 0)
         {
-            $("#firmware-setting").submit();
+			alert("button#upgrade");
             $("#loading-text").html("上传中...");
             $("div.loading-container#loading-container").css("display", "block");
             $("div.mask#mask").css("display", "block");
-            var updateStatus = function() {
-                $.get("/action/status", function(_data, _status){
-                    var data_json = JSON.parse(_data);
-                    if (data_json.length == 1) {
-                        var info = data_json[0];
-                        if (info.status && "upgrade" == info.status) {
-                            if (info.upgradestatus && "error" == info.upgradestatus) {
-                                $("div.loading-container#loading-container").css("display", "none");
-                                $("div.mask#mask").css("display", "none");
-                                if (info.code) {
-                                    if (info.code == 0) {
-                                        $("div.error-tips-content").html("校验错误");
-                                    } else if (info.code == 1) {
-                                        $("div.error-tips-content").html("不能降级");
-                                    } else if (info.code == 2) {
-                                        $("div.error-tips-content").html("版本相同无需升级");
-                                    } else if (info.code == 3) {
-                                        $("div.error-tips-content").html("内部错误");
-                                    } else {
-                                        $("div.error-tips-content").html("内部错误");
-                                    }
-                                    $("div.widget-error-tips").css("display", "block");
-                                }
-                            } else {
-                                if ("check" == info.upgradestatus) {
-                                    $("#loading-text").html("校验中...");
-                                    setTimeout(updateStatus, 1000);
-                                } else if ("upgrade" == info.upgradestatus) {
-                                    $("#loading-text").html("升级中...");
-                                    setTimeout(updateStatus, 1000);
-                                } else if ("reboot" == info.upgradestatus) {
-                                    $.get("/action/status?mode=reboot", function(_data, _status){});
-                                    $("#loading-text").html("重启中...");
-                                    setTimeout("javascript:location.href='index.html';location.reload();", 15000);
-                                }
-                            }
-                        } else {
-                            setTimeout(updateStatus, 1000);
-                        }
-                    }
-                });
-            };
-            var waitforUploadDone = function() {
-                $.get("/action/status", function(_data, _status){
-                    var data_json = JSON.parse(_data);
-                    if (data_json.length == 1) {
-                        var info = data_json[0];
-                        if (info.status && "upgrade" == info.status) {
-                            $("#loading-text").html("上传成功");
-                            updateStatus();
-                        } else {
-                            setTimeout(waitforUploadDone, 1000);
-                        }
-                    }
-                });
-            }
-            $.get("/action/status?mode=upload", function(_data, _status){});
-            waitforUploadDone();
+            
+			fileUpload();
         }
         else if (filestatus == 1)
         {
@@ -103,16 +92,28 @@ funs["su"] = function() {
             $("div.widget-error-tips").css("display", "block");
         }
     });
+	// 当前版本 & 发布日期
     $.get("/action/status?mode=init", function(_data, _status){
         var data_json = JSON.parse(_data);
         $.each(data_json, function(index, info){
-            if (info.version && $("#software_version").length > 0) {
-                $("#software_version").attr("value", info.version);
+            // if (info.version && $("#software_version").length > 0) {
+            if (index == "version") {
+                // $("#software_version").attr("value", info.version);
+                $("#software_version").attr("value", info);
             }
-            if (info.buildtime && $("#software_time").length > 0) {
-                var date = new Date(parseInt(info.buildtime) * 1000);
-                var dateStr = date.getFullYear() + '-' + (date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '-' + (date.getDate() < 10 ? '0' + date.getDate() : date.getDate()) + ' ' + (date.getHours() < 10 ? '0' + date.getHours() : date.getHours()) + ':' + (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()) + ':' + (date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getSeconds());
+            // if (info.buildtime && $("#software_time").length > 0) {
+            else if (index == "buildtime") {
+                var date = new Date(parseInt(info) * 1000);
+                var dateStr = date.getFullYear() + '-' + 
+					(date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '-' + 
+					(date.getDate() < 10 ? '0' + date.getDate() : date.getDate()) + ' ' + 
+					(date.getHours() < 10 ? '0' + date.getHours() : date.getHours()) + ':' + 
+					(date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()) + ':' + 
+					(date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getSeconds());
                 $("#software_time").attr("value", dateStr);
+            }
+			else if (index == "status") {
+                $("#software_status").attr("value", info);
             }
         });
     });
@@ -216,8 +217,20 @@ $(document).ready(function(e){
 			<div class="top-content-wrap" id="top-content">
 				<div id="menu-advanced" class="menu-container">
 					<ul class="menu-tree advanced">
-					<li class="fst selected" id="menu-advanced-running-status-li"><a class="fst none-sec selected" data-child="no" data-name="running-status" name="running-status" tab-id="tab-menu-ul-1010746721" ref-url="pages/system_state.html" ifun="ss"><span class="icon"></span><span class="text">运行状态</span></a></li>
-					<li class="fst" id="menu-advanced-sys-tools-li"><a class="fst none-sec" data-child="no" data-name="system-mgnt" name="system-mgnt" tab-id="tab-menu-ul-1559772315" ref-url="pages/system_upgrade.html" ifun="su"><span class="icon"></span><span class="text">系统升级</span></a></li>
+					<li class="fst " id="menu-advanced-running-status-li">
+					     <a class="fst none-sec" data-child="no" 
+						    data-name="running-status" name="running-status" tab-id="tab-menu-ul-1010746721" 
+							ref-url="pages/system_state.html" ifun="ss"><span class="icon">
+							   </span><span class="text">运行状态</span>
+						 </a>
+					</li>
+					<li class="fst selected" id="menu-advanced-sys-tools-li">
+					     <a class="fst none-sec selected" data-child="no" 
+						    data-name="system-mgnt" name="system-mgnt" tab-id="tab-menu-ul-1559772315" 
+							ref-url="pages/system_upgrade.html" ifun="su">
+							   <span class="icon"></span><span class="text">系统升级</span>
+						 </a>
+				    </li>
                     <!--
 					<li class="fst" id="menu-advanced-device-mgnt-li"><a class="fst none-sec" id="device-mgnt" data-child="no" data-name="device-mgnt" name="device-mgnt" tab-id="tab-menu-ul-1559772315"><span class="icon"></span><span class="text">终端管理</span></a></li>
 					<li class="fst" id="menu-advanced-basic-setting-li"><a class="fst" id="basic-setting" data-child="yes" data-name="basic-setting" name="basic-setting"><span class="icon"></span><span class="text">基本设置</span></a><div class="menu-sec-wrap"><ul class="sec hidden" style="display: none;"><li class="sec sec-fst"><a class="sec" data-name="interface-mode" name="interface-mode" tab-id="tab-menu-ul-7507727137"><span class="selected-tag"></span><span class="text">接口模式</span></a></li><li class="sec "><a class="sec" data-name="wan-setting" name="wan-setting" tab-id="tab-menu-ul-6202319232"><span class="selected-tag"></span><span class="text">WAN设置</span></a></li><li class="sec sec-lst"><a class="sec" data-name="lan-settings" name="lan-settings" tab-id="tab-menu-ul-5464632311"><span class="selected-tag"></span><span class="text">LAN设置</span></a></li></ul></div></li>
