@@ -244,7 +244,7 @@ static int processUploadHeader(Webs *wp, char *line)
                         "Can't create upload temp file %s. Check upload temp dir %s", wp->uploadTmp, uploadDir);
                     return -1;
                 }
-                trace(5, "File upload of: %s stored as %s", wp->clientFilename, wp->uploadTmp);
+                trace(2, "DBG - File upload of: %s stored as %s", wp->clientFilename, wp->uploadTmp);
 
                 if ((wp->upfd = open(wp->uploadTmp, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0600)) < 0) {
                     websError(wp, HTTP_CODE_INTERNAL_SERVER_ERROR, "Can't open upload temp file %s", wp->uploadTmp);
@@ -302,6 +302,7 @@ static int writeToFile(Webs *wp, char *data, ssize len)
         websError(wp, HTTP_CODE_REQUEST_TOO_LARGE, "Uploaded file exceeds maximum %d", (int) BIT_GOAHEAD_LIMIT_UPLOAD);
         return -1;
     }
+    trace(2, "[%s:%s:%d] log output: %d ", __FILE__, __FUNCTION__, __LINE__, len);
     if (len > 0) {
         /*  
             File upload. Write the file data.
@@ -311,7 +312,7 @@ static int writeToFile(Webs *wp, char *data, ssize len)
             return -1;
         }
         file->size += len;
-        trace(7, "uploadFilter: Wrote %d bytes to %s", len, wp->uploadTmp);
+        trace(2, "uploadFilter: Wrote %d bytes to %s", len, wp->uploadTmp);
     }
     return 0;
 }
@@ -323,6 +324,7 @@ static int processContentData(Webs *wp)
     WebsBuf         *content;
     ssize           size, nbytes;
     char            *data, *bp;
+    char            cmd_string[1024] = "";
 
     content = &wp->input;
     file = wp->currentFile;
@@ -332,14 +334,16 @@ static int processContentData(Webs *wp)
         /*  Incomplete boundary. Return and get more data */
         return 0;
     }
+
     if ((bp = getBoundary(wp, content->servp, size)) == 0) {
-        trace(7, "uploadFilter: Got boundary filename %x", wp->clientFilename);
+        trace(2, "uploadFilter: Got boundary filename %x", wp->clientFilename);
         if (wp->clientFilename) {
             /*  
                 No signature found yet. probably more data to come. Must handle split boundaries.
              */
             data = content->servp;
             nbytes = ((int) (content->endp - data)) - (wp->boundaryLen - 1);
+            trace(2, "[%s:%s:%d] log output: %d ", __FILE__, __FUNCTION__, __LINE__, nbytes);
             if (nbytes > 0 && writeToFile(wp, content->servp, nbytes) < 0) {
                 return -1;
             }
@@ -363,6 +367,7 @@ static int processContentData(Webs *wp)
             /*  
                 Write the last bit of file data and add to the list of files and define environment variables
              */
+            trace(2, "[%s:%s:%d] log output: %d ", __FILE__, __FUNCTION__, __LINE__, nbytes);
             if (writeToFile(wp, data, nbytes) < 0) {
                 return -1;
             }
@@ -384,11 +389,16 @@ static int processContentData(Webs *wp)
         /*  
             Now have all the data (we've seen the boundary)
          */
+        trace(2, "[%s:%s:%d] log output: %s ", __FILE__, __FUNCTION__, __LINE__, wp->uploadTmp);
+        sprintf(cmd_string, "cp %s %s/%s", wp->uploadTmp, uploadDir, wp->clientFilename);
+        trace(2, "[%s:%s:%d] log output: %s ", __FILE__, __FUNCTION__, __LINE__, cmd_string);
         close(wp->upfd);
         wp->upfd = -1;
         wp->clientFilename = 0;
         wfree(wp->uploadTmp);
         wp->uploadTmp = 0;
+
+        system(cmd_string);
     }
     wp->uploadState = UPLOAD_BOUNDARY;
     return 0;
