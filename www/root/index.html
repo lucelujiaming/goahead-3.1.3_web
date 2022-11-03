@@ -11,10 +11,6 @@
 <link type="text/css" href="themes/neoteric/css/style.css" rel="stylesheet" />
 
 <script type="text/javascript" src="js/zepto.js"></script>
-
-<script type="text/javascript" src="js/ajaxfileupload.js"></script>
-<script type="text/javascript" src="js/ajaxbasic.js"></script>
-
 <script type="text/javascript">
 var filestatus = 1;
 var checkFileName = function() {
@@ -32,42 +28,6 @@ var checkFileName = function() {
     }
 };
 
-function fileUpload()
-{
-    var id = "file";
-	alert("ajaxFileUpload");
-    $.ajaxFileUpload
-    (
-         {
-            url:'/action/uploadProc',
-            secureuri:false,
-            fileElementId:id,
-            dataType:'xml',
-            data:{ upFile:'firmware',localurl:'/file-upload.asp',token:gettk() },
-            success: function (data, status)
-            {
-				$("div.loading-container#loading-container").css("display", "none");
-                $("div.mask#mask").css("display", "none");
-                // clearTimeout(timeoutProcess);
-                $("#file").val('');
-				alert("success");
-
-            },
-            error: function (data, status, e)
-            {
-                // clearTimeout(timeoutProcess);
-                $("#file").val('');
-				$("div.loading-container#loading-container").css("display", "none");
-                $("div.mask#mask").css("display", "none");
-                alert("Upload firmware failed.");
-            }
-        }
-    )
-	alert("ajaxFileUpload Over");
-
-    return false;
-}
-
 var funs = {};
 funs["su"] = function() {
     // 浏览
@@ -79,12 +39,20 @@ funs["su"] = function() {
     $("button#upgrade").on("click", function(e){
         if (filestatus == 0)
         {
-			alert("button#upgrade");
+            $("#firmware-setting").submit();
             $("#loading-text").html("上传中...");
             $("div.loading-container#loading-container").css("display", "block");
             $("div.mask#mask").css("display", "block");
-            
-			fileUpload();
+            var updateStatus = function() {
+				$("div.loading-container#loading-container").css("display", "none");
+				$("div.mask#mask").css("display", "none");
+				alert("升级成功");
+            };
+            var waitforUploadDone = function() {
+				setTimeout(updateStatus, 500);
+            }
+            $.get("/action/status?mode=upload", function(_data, _status){});
+            waitforUploadDone();
         }
         else if (filestatus == 1)
         {

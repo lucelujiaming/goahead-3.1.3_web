@@ -77,14 +77,19 @@ char* get_last_modify_time(char* path, char* time_str)
         return ctime(&last_modify_time);
     }
     else
+    {
+	sprintf(time_str, "Unknown");
         trace(2, "path error");
+    }
     return NULL;
 }
 
+#define  APP_PATH_LEN    128
 char* initProc()
 {
     char *pVal;
     char *ret_str;
+#ifdef USE_CJSON
     cJSON *ret_data;
     char info_str[1024];
 
@@ -100,16 +105,39 @@ char* initProc()
         cJSON_AddStringToObject(ret_data, "buildtime", info_str);
     else
         cJSON_AddStringToObject(ret_data, "buildtime", "Unknown");
-    
+
     memset(info_str, 0x00, 1024);
     get_cmd_printf("ps | grep 'app.scode' | grep -v grep", info_str, 1024);
     if(strlen(info_str) >= strlen("app.scode"))
         cJSON_AddStringToObject(ret_data, "status", "standby");
     else
         cJSON_AddStringToObject(ret_data, "status", "shutdown");
-    
+
     ret_str = cJSON_Print(ret_data);
     cJSON_Delete(ret_data);
+#else
+    char version_string[APP_PATH_LEN] = "";
+    char filetime_string[APP_PATH_LEN] = "";
+    char status_string[APP_PATH_LEN] = "";
+
+    get_cmd_printf("cat /etc/VERSION", version_string, APP_PATH_LEN);
+    pVal = get_last_modify_time("/data/svm/app.sab", filetime_string);
+    get_cmd_printf("ps | grep 'app.scode' | grep -v grep", status_string, APP_PATH_LEN);
+    if(strlen(status_string) >= strlen("app.scode"))
+    {
+        strcpy(status_string, "standby");
+    }
+    else
+    {
+        strcpy(status_string, "shutdown");
+    }
+    ret_str = (char *)malloc(1024);
+    if(ret_str)
+    {
+        sprintf(ret_str, "{ \"version\": \"%s\", \"buildtime\": \"%s\", \"status\": \"%s\" }", 
+           version_string, filetime_string, status_string);
+    }
+#endif
     trace(2, "ret_str = %s", ret_str);
     return ret_str;
 }
@@ -125,8 +153,11 @@ void statusProc(Webs *wp)
     if(strcmp(pVal, "init") == 0)
     {
         ret_str = initProc();
-        websWrite(wp, ret_str);
-        free(ret_str);
+        if(ret_str)
+        {
+            websWrite(wp, ret_str);
+            free(ret_str);
+        }
         websDone(wp);
     }
     else
@@ -140,7 +171,6 @@ void sumbitProc(Webs *wp)
     
 }
 
-#define  APP_PATH_LEN    128
 int check_uploadfile(Webs *wp)
 {
     char app_sab_str[APP_PATH_LEN] = "";
