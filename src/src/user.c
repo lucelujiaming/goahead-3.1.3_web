@@ -81,20 +81,12 @@ char* get_last_modify_time(char* path, char* time_str)
     return NULL;
 }
 
-void sumbitProc(Webs *wp)
+char* initProc()
 {
-    
-}
-
-void statusProc(Webs *wp)
-{
-    char *ret_str;
     char *pVal;
+    char *ret_str;
     cJSON *ret_data;
     char info_str[1024];
-
-    pVal = websGetVar(wp, "mode", "");
-    trace(2, "statusProc::pVal = %s", pVal);
 
     ret_data = cJSON_CreateObject();
 
@@ -119,14 +111,100 @@ void statusProc(Webs *wp)
     ret_str = cJSON_Print(ret_data);
     cJSON_Delete(ret_data);
     trace(2, "ret_str = %s", ret_str);
-    websWrite(wp, ret_str);
-    free(ret_str);
+    return ret_str;
+}
+
+void statusProc(Webs *wp)
+{
+    char *ret_str;
+    char *pVal;
+
+    pVal = websGetVar(wp, "mode", "");
+    trace(2, "statusProc::pVal = %s", pVal);
+
+    if(strcmp(pVal, "init") == 0)
+    {
+        ret_str = initProc();
+        websWrite(wp, ret_str);
+        free(ret_str);
+        websDone(wp);
+    }
+    else
+    {
+        websDone(wp);
+    }
+}
+
+void sumbitProc(Webs *wp)
+{
+    
+}
+
+#define  APP_PATH_LEN    128
+int check_uploadfile(Webs *wp)
+{
+    char app_sab_str[APP_PATH_LEN] = "";
+    char app_scode_str[APP_PATH_LEN] = "";
+    struct stat stat_buf;
+    char *pVal;
+
+    pVal = websGetVar(wp, "UPLOAD_DIR", "/data");
+    trace(2, "[%s:%s:%d] pVal = %s", __FILE__, __FUNCTION__, __LINE__, pVal);
+
+    sprintf(app_sab_str, "%s/app.sab", pVal);
+    sprintf(app_scode_str, "%s/app.scode", pVal);
+    if(stat(app_sab_str, &stat_buf)==0)
+    {
+        system("/data/svm/www/stop_svm.sh &");
+        memset(app_sab_str, 0x00, APP_PATH_LEN);
+        sprintf(app_sab_str, "mv %s/app.sab /data/svm/", pVal);
+        system(app_sab_str);
+        system("chmod 664 /data/svm/app.sab");
+        system("/etc/rc.d/rc.svm &");
+        trace(2, "uploadProc :: update by %s", app_sab_str);
+    }
+    else if(stat(app_scode_str, &stat_buf)==0)
+    {
+        system("/data/svm/www/stop_svm.sh &");
+        memset(app_scode_str, 0x00, APP_PATH_LEN);
+        sprintf(app_scode_str, "mv %s/app.scode /data/svm/", pVal);
+        system(app_scode_str);
+        system("chmod 664 /data/svm/app.scode");
+        system("/etc/rc.d/rc.svm &");
+        trace(2, "uploadProc :: update by %s", app_scode_str);
+    }
+    else
+    {
+        trace(2, "uploadProc :: update error");
+        return 1;
+    }
+    return 0;
+}
+
+void uploadProc(Webs *wp)
+{
+    char info_str[1024];
+    int iRet = check_uploadfile(wp);
+    sprintf(info_str, "%d", iRet);
+    websWrite(wp, info_str);
+    websDone(wp);
+}
+
+void upgradeProc(Webs *wp)
+{
+    char info_str[1024];
+    int iRet = check_uploadfile(wp);
+    sprintf(info_str, "%d", iRet);
+    websWrite(wp, info_str);
     websDone(wp);
 }
 
 void UserDefineInitialize()
 {
     websDefineAction("status", statusProc);
+
+    websDefineAction("uploadProc", uploadProc);
+    websDefineAction("upgrade", upgradeProc);
     websDefineAction("sumbitProc", sumbitProc);
 }
 

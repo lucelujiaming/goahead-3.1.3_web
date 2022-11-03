@@ -59,6 +59,7 @@ PUBLIC char *websTempFile(char *dir, char *prefix)
     if (!prefix) {
         prefix = "tmp";
     }
+    trace(2, "[%s:%s:%d] log output: %s/%s-%d.tmp ", __FILE__, __FUNCTION__, __LINE__, dir, prefix, count++);
     return sfmt("%s/%s-%d.tmp", dir, prefix, count++);
 }
 

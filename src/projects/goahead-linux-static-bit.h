@@ -96,7 +96,7 @@
     #define BIT_GOAHEAD_LIMIT_PASSWORD 32
 #endif
 #ifndef BIT_GOAHEAD_LIMIT_POST
-    #define BIT_GOAHEAD_LIMIT_POST 16384
+    #define BIT_GOAHEAD_LIMIT_POST 2097152 
 #endif
 #ifndef BIT_GOAHEAD_LIMIT_PUT
     #define BIT_GOAHEAD_LIMIT_PUT 204800000
@@ -147,7 +147,7 @@
     #define BIT_GOAHEAD_UPLOAD 1
 #endif
 #ifndef BIT_GOAHEAD_UPLOAD_DIR
-    #define BIT_GOAHEAD_UPLOAD_DIR "/tmp"
+    #define BIT_GOAHEAD_UPLOAD_DIR "/data/upload"
 #endif
 #ifndef BIT_GOAHEAD_VERIFY_ISSUER
     #define BIT_GOAHEAD_VERIFY_ISSUER 0

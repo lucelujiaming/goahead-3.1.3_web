@@ -871,6 +871,7 @@ static bool parseIncoming(Webs *wp)
     if (wp->state == WEBS_COMPLETE) {
         return 1;
     }
+    trace(2, "DBG -- parseHeaders ");
     parseHeaders(wp);
     if (wp->state == WEBS_COMPLETE) {
         return 1;
@@ -938,7 +939,7 @@ static void parseFirstLine(Webs *wp)
     protoVer = getToken(wp, "\r\n");
     if (websGetLogLevel() == 2) {
         // trace(2, "%s %s %s", wp->method, url, protoVer);
-        trace(2, "XunGao : %s %s %s", wp->method, url, protoVer);
+        trace(2, "CELLCONS : %s %s %s", wp->method, url, protoVer);
     }
 
     /*
@@ -1074,6 +1075,7 @@ static void parseHeaders(Webs *wp)
             if (strstr(value, "application/x-www-form-urlencoded")) {
                 wp->flags |= WEBS_FORM;
             } else if (strstr(value, "multipart/form-data")) {
+                trace(2, "DBG -- WEBS_UPLOAD %s", value);
                 wp->flags |= WEBS_UPLOAD;
             }
 
