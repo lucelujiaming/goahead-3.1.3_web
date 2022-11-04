@@ -129,6 +129,11 @@ funs["su"] = function() {
             }
         });
     });
+	// 当前版本 & 发布日期
+    $.get("/action/status?mode=get_iprange", function(_data, _status){
+		alert("get_iprange = " + _data);
+		$("#ip_range").attr("value", _data);
+    });
 };
 var updateContent = function(url, fun) {
     var req = false;

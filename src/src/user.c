@@ -167,12 +167,20 @@ void statusProc(Webs *wp)
     {
         pValue = websGetVar(wp, "value", "");
         trace(2, "statusProc::pValue = %s", pValue);
+        websDone(wp);
         iValue = atoi(pValue);
         if(iValue > 1 && iValue < 255)
         {
             sprintf(info_str, "/data/svm/www/change_ip_address.sh %s &", pValue);
             system(info_str);
         }
+    }
+    else if(strcmp(pMode, "get_iprange") == 0)
+    {
+        memset(info_str, 0x00, 1024);
+        get_cmd_printf("cat /data/svm/current_iprange", info_str, 1024);
+        websWrite(wp, info_str);
+        websDone(wp);
     }
     else
     {
