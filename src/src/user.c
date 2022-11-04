@@ -145,12 +145,15 @@ char* initProc()
 void statusProc(Webs *wp)
 {
     char *ret_str;
-    char *pVal;
+    char *pMode;
+    char *pValue;
+    int   iValue;
+    char info_str[1024];
 
-    pVal = websGetVar(wp, "mode", "");
-    trace(2, "statusProc::pVal = %s", pVal);
+    pMode = websGetVar(wp, "mode", "");
+    trace(2, "statusProc::pVal = %s", pMode);
 
-    if(strcmp(pVal, "init") == 0)
+    if(strcmp(pMode, "init") == 0)
     {
         ret_str = initProc();
         if(ret_str)
@@ -159,6 +162,17 @@ void statusProc(Webs *wp)
             free(ret_str);
         }
         websDone(wp);
+    }
+    else if(strcmp(pMode, "set_ipaddress") == 0)
+    {
+        pValue = websGetVar(wp, "value", "");
+        trace(2, "statusProc::pValue = %s", pValue);
+        iValue = atoi(pValue);
+        if(iValue > 1 && iValue < 255)
+        {
+            sprintf(info_str, "/data/svm/www/change_ip_address.sh %s &", pValue);
+            system(info_str);
+        }
     }
     else
     {
