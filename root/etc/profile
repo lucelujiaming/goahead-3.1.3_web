@@ -1,0 +1,70 @@
+#!/bin/sh
+
+# System wide environment and startup programs, for login setup
+# Functions and aliases go in /etc/bashrc
+
+pathmunge () {
+	if ! echo $PATH | /bin/egrep -q "(^|:)$1($|:)" ; then
+	   if [ "$2" = "after" ] ; then
+	      PATH=$PATH:$1
+	   else
+	      PATH=$1:$PATH
+	   fi
+	fi
+}
+
+PATH="/usr/local/bin:/usr/bin:/bin"
+EDITOR="/bin/vi"
+TERM="vt102"
+HOSTNAME=`/bin/hostname`
+HISTSIZE=100
+
+# set time zone
+ZONE="Asia/Shanghai"
+UTC=0
+
+# ksh workaround
+if [ -z "$EUID" -a -x /usr/bin/id ]; then 
+	EUID=`id -u`
+	UID=`id -ru`
+fi
+
+# Path manipulation
+if [ "$EUID" = "0" ]; then
+	pathmunge /sbin
+	pathmunge /usr/sbin
+	pathmunge /usr/local/sbin
+fi
+
+# works for bash and ash
+if [ "$PS1" ]; then
+	PS1='[\u@\h \w]\\$ '
+fi
+
+# No core files by default
+ulimit -S -c 0 > /dev/null 2>&1
+
+if [ -x /usr/bin/id ]; then
+	USER="`id -un`"
+	LOGNAME=$USER
+	MAIL="/var/spool/mail/$USER"
+fi
+
+if [ -z "$INPUTRC" -a ! -f "$HOME/.inputrc" ]; then
+    INPUTRC=/etc/inputrc
+fi
+
+export PATH USER LOGNAME MAIL HOSTNAME HISTSIZE INPUTRC EDITOR TERM
+
+for i in /etc/profile.d/*.sh ; do
+    if [ -r "$i" ]; then
+    	. $i
+    fi
+done
+
+unset i
+unset pathmunge
+
+if [ -x /etc/rc.d/rc.boot ]; then
+	. /etc/rc.d/rc.boot 
+fi

@@ -1,0 +1,26 @@
+#!/bin/sh
+
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+[ -d /sys/block -a -x /sbin/udevd ] || mount -n -t sysfs sys /sys
+
+make_extra_nodes() {
+	ln -snf /proc/self/fd /dev/fd
+	ln -snf /porc/self/fd/0 /dev/stdin
+	ln -snf /proc/self/fd/1 /dev/stdout
+	ln -snf /proc/self/fd/2 /dev/stderr
+	ln -snf /proc/kcore /dev/core
+	[ -d /dev/pts ] || mkdir -m 755 /dev/pts
+	[ -d /dev/shm ] || mkdir -m 755 /dev/shm
+	if [ -d /sys/bus/usb ]; then
+		/bin/mount -n -t usbfs /proc/bus/usb /proc/bus/usb
+	fi
+}
+#if [ ! -e /dev/shm/devok ]; then
+	mount -n -t tmpfs tmpfs /dev
+	make_extra_nodes
+	udevstart
+#	echo 1 > /dev/shm/devok
+#fi
+# udevd --daemon
+

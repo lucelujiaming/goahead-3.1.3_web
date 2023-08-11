@@ -1,0 +1,20 @@
+#!/bin/sh
+
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin
+#############################################################
+# save system date to RTC
+if [ -e /dev/rtc ]; then
+	/sbin/hwclock -w
+fi
+#############################################################
+# kill daemon
+killall udhcpc
+killall klogd
+killall syslogd
+killall telnetd
+killall udevd
+killall5
+#############################################################
+/bin/umount -a -r
+#############################################################
+

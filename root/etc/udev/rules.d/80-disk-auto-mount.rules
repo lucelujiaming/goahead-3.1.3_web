@@ -1,0 +1,12 @@
+ACTION=="add", KERNEL=="sd[a-z][0-9]", RUN+="/bin/mkdir -p /media/usb%n"
+ACTION=="add", KERNEL=="sd[a-z][0-9]", PROGRAM=="/lib/udev/vol_id -t %N", RESULT=="vfat", RUN+="/bin/mount -t vfat -o rw,noauto,sync,noexec,nodev,noatime,dmask=000,fmask=111 /dev/%k /media/usb%n", OPTIONS="last_rule"
+ACTION=="add", KERNEL=="sd[a-z][0-9]", RUN+="/bin/mount -t auto -o rw,noauto,sync,noexec,nodev,noatime /dev/%k /media/usb%n", OPTIONS="last_rule"
+ACTION=="remove", KERNEL=="sd[a-z][0-9]", RUN+="/bin/umount -l /media/usb%n"
+ACTION=="remove", KERNEL=="sd[a-z][0-9]", RUN+="/bin/rmdir /media/usb%n", OPTIONS="last_rule"
+
+
+ACTION=="add", KERNEL=="mmcblk[0-9]p[0-9]", RUN+="/bin/mkdir -p /media/mmc%n"
+ACTION=="add", KERNEL=="mmcblk[0-9]p[0-9]", PROGRAM=="/lib/udev/vol_id -t %N", RESULT=="vfat", RUN+="/bin/mount -t vfat -o rw,noauto,sync,noexec,nodev,noatime,dmask=000,fmask=111 /dev/%k /media/mmc%n", OPTIONS="last_rule"
+ACTION=="add", KERNEL=="mmcblk[0-9]p[0-9]", RUN+="/bin/mount -t auto -o rw,noauto,sync,noexec,nodev,noatime /dev/%k /media/mmc%n", OPTIONS="last_rule"
+ACTION=="remove", KERNEL=="mmcblk[0-9]p[0-9]", RUN+="/bin/umount -l /media/mmc%n"
+ACTION=="remove", KERNEL=="mmcblk[0-z]p[0-9]", RUN+="/bin/rmdir /media/mmc%n", OPTIONS="last_rule"

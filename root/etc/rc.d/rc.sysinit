@@ -1,0 +1,91 @@
+#!/bin/sh
+
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin
+#############################################################
+if [ -f /etc/sysconfig/network ]; then
+    . /etc/sysconfig/network
+fi
+if [ -z "$HOSTNAME" -o "$HOSTNAME" = "(none)" ]; then
+    HOSTNAME=localhost
+fi
+/bin/hostname $HOSTNAME
+
+#############################################################
+/bin/mount -n -o remount,rw /dev/root /
+/bin/mount -n -t proc proc /proc
+/bin/mount -n -t sysfs sys /sys >/dev/null 2>&1
+/bin/mount -n -t tmpfs tmpfs /tmp
+
+echo -n "starting udev..."
+. /etc/rc.d/udev
+echo "done"
+
+/bin/mount -n -t devpts /dev/pts /dev/pts
+/bin/mount -n -t yaffs2 /dev/mtdblock2 /data
+#############################################################
+# set system data and time
+if [ -e "/dev/rtc" ]; then
+	/sbin/hwclock -s
+fi
+#############################################################
+# watchdog 
+if [ "$WATCHDOG" = "yes" ] && [ -e "/dev/watchdog" ]; then
+	echo -n "starting watchdog..."
+	/sbin/watchdog -t 1 /dev/watchdog
+	echo "done"
+fi
+#############################################################
+# set net interface
+if [ "$NETWORKING" = "yes" ]; then
+	echo -n "starting networking..."
+	ifconfig lo 127.0.0.1 up
+	route add -net 127.0.0.0 netmask 255.0.0.0 lo
+    if [ -f /data/network-config ]; then
+      . /data/network-config
+    fi
+	if [ "$DHCP" = "yes" ]; then
+		udhcpc $DEVICE -b /var/run/udhcpc.$DEVICE >/dev/null 2>&1
+	else
+		ifconfig $DEVICE inet $IPADDR netmask $NETMASK up
+                #route add -net $GATEWAY netmask $NETMASK $DEVICE
+                route add default gw $DEFAULT_GATEWAY
+	fi
+	echo "done."
+fi
+#############################################################
+# system log demo
+if [ "$SYSLOGD" = "yes" ]; then
+	echo -n "starting syslogd... "
+	/sbin/syslogd -C -m 0
+	echo "done."
+fi
+
+if [ "$KLOGD" = "yes" ]; then
+	echo -n "starting klogd... "
+	/sbin/klogd
+	echo "done."
+fi
+
+if [ "$TELNETD" = "yes" ]; then
+#	echo -n "starting telnetd... "
+	/usr/sbin/telnetd
+	echo "done."
+fi
+############################################################
+# start custom demon
+if [ -d /etc/rc.d/init.d ]; then
+	for dm in `ls /etc/rc.d/init.d`; do
+		echo -n "starting $dm..."
+		. /etc/rc.d/init.d/$dm
+		echo "done."
+	done
+fi
+############################################################
+# show logo
+echo ""
+if [ -f "/etc/sysconfig/logo" ]; then
+	cat /etc/sysconfig/logo
+fi
+echo ""
+############################################################
+#auto modified for svm.

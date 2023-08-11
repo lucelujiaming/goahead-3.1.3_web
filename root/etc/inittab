@@ -1,0 +1,16 @@
+::sysinit:/etc/rc.d/rc.sysinit
+#::sysinit:-/bin/sh
+
+#::once:/sbin/udevtrigger
+
+#ttyS0::respawn:-/bin/sh
+ttyS4::respawn:-/bin/sh
+
+#tty1::respawn:-/bin/sh /minigui/mgstart
+#tty2::respawn:/sbin/getty -L 38400 tty2
+
+# stuff to do before shutdown
+::shutdown:/etc/rc.d/rc.sysexit
+::restart:/etc/rc.d/rc.sysexit
+::restart:/sbin/init
+::once:/etc/rc.d/rc.svm
