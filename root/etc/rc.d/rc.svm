@@ -23,9 +23,12 @@ else
     /bin/cp /tools/app.kif /data/svm/
   fi
   rm -rf /data/*.bin
+  # Change http server from httpdd to goahead 
   # /bin/httpdd --home /www 1>/dev/null 2>&1 &
   cp /www/current_iprange /data/svm/
   /bin/goahead --home /www &
+  # Add stupid-ftpd as ftp server 
+  /sbin/stupid-ftpd.Linux6 -f /etc/stupid-ftpd.conf
   /usr/sbin/bacid 1>/dev/null 2>&1 &
   /usr/sbin/bacmd 1>/dev/null 2>&1 &
 
