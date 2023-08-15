@@ -104,6 +104,33 @@ funs["su"] = function() {
             $("div.widget-error-tips").css("display", "block");
         }
     });
+	// 日期时间设置
+    $("button#set_datetime").on("click", function(e){
+		var date_str = $("#date_setting")[0].value;
+		var time_str = $("#time_setting")[0].value;
+		var datetime_str  = date_str.substr(5, 2);
+		    datetime_str += date_str.substr(8, 2); 
+		    datetime_str += time_str.substr(0, 2); 
+		    datetime_str += time_str.substr(3, 2); 
+			datetime_str += date_str.substr(0, 4);
+		alert("click::datetime_str = " + datetime_str);
+		
+		$("div.widget-error-tips").css("display", "none");
+		// 
+		$("#loading-text").html("设置中...");
+		$("div.loading-container#loading-container").css("display", "block");
+		$("div.mask#mask").css("display", "block");
+		var updateDatetime = function() {
+			$("div.loading-container#loading-container").css("display", "none");
+			$("div.mask#mask").css("display", "none");
+			alert("设置成功");
+		};
+		var waitforDatetimeSetDone = function() {
+			setTimeout(updateDatetime, 2000);
+		}
+		$.get("/action/status?mode=set_datetime&value=" + datetime_str, function(_data, _status){});
+		waitforDatetimeSetDone();
+    });
 	// 当前版本 & 发布日期
     $.get("/action/status?mode=init", function(_data, _status){
         var data_json = JSON.parse(_data);
@@ -129,11 +156,59 @@ funs["su"] = function() {
             }
         });
     });
-	// 当前版本 & 发布日期
+	// 获取IP地址段
     $.get("/action/status?mode=get_iprange", function(_data, _status){
-		alert("get_iprange = " + _data);
+		// alert("get_iprange = " + _data);
 		$("#ip_range").attr("value", _data);
     });
+	
+	// Set date
+	var date = new Date();
+	var year = date.getFullYear();
+	var month = date.getMonth() + 1;
+	var day = date.getDate();
+	var dateValue = year;
+	if(parseInt(month) >= 10)
+	{
+		dateValue = dateValue + "-" + month;
+	}
+	else 
+	{
+		dateValue = dateValue + "-0" + month;
+	}
+	if(parseInt(day) >= 10)
+	{
+		dateValue = dateValue + "-" + day;
+	}
+	else 
+	{
+		dateValue = dateValue + "-0" + day;
+	}
+	$("#date_setting").attr("value", dateValue);
+	// alert("date_setting = " + dateValue);
+	// Set Time
+	var hour = date.getHours();
+	var minute = date.getMinutes();
+	// var second = date.getSeconds();
+	var timeValue = ""
+	if(parseInt(hour) >= 10)
+	{
+		timeValue = hour;
+	}
+	else 
+	{
+		timeValue = "0" + hour;
+	}
+	if(parseInt(minute) >= 10)
+	{
+		timeValue = timeValue + ":" + minute;
+	}
+	else 
+	{
+		timeValue = timeValue + ":0" + minute;
+	}
+	$("#time_setting").attr("value", timeValue);
+	
 };
 var updateContent = function(url, fun) {
     var req = false;
@@ -246,6 +321,13 @@ $(document).ready(function(e){
 						    data-name="system-mgnt" name="system-mgnt" tab-id="tab-menu-ul-1559772315" 
 							ref-url="pages/system_setting.html" ifun="su">
 							   <span class="icon"></span><span class="text">系统设置</span>
+						 </a>
+				    </li>
+					<li class="fst selected" id="menu-advanced-sys-tools-li">
+					     <a class="fst none-sec selected" data-child="no" 
+						    data-name="system-mgnt" name="system-mgnt" tab-id="tab-menu-ul-1559772315" 
+							ref-url="pages/datetime_setting.html" ifun="su">
+							   <span class="icon"></span><span class="text">时间设置</span>
 						 </a>
 				    </li>
 					<li class="fst selected" id="menu-advanced-sys-tools-li">

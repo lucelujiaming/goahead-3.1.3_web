@@ -175,6 +175,15 @@ void statusProc(Webs *wp)
             system(info_str);
         }
     }
+    else if(strcmp(pMode, "set_datetime") == 0)
+    {
+        memset(info_str, 0x00, 1024);
+        pValue = websGetVar(wp, "value", "");
+        trace(2, "statusProc::pValue = %s", pValue);
+        websDone(wp);
+        sprintf(info_str, "date -s %s &", pValue);
+        system(info_str);
+    }
     else if(strcmp(pMode, "get_iprange") == 0)
     {
         memset(info_str, 0x00, 1024);
