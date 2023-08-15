@@ -131,9 +131,57 @@ funs["su"] = function() {
     });
 	// 当前版本 & 发布日期
     $.get("/action/status?mode=get_iprange", function(_data, _status){
-		alert("get_iprange = " + _data);
+		// alert("get_iprange = " + _data);
 		$("#ip_range").attr("value", _data);
     });
+	
+	// Set date
+	var date = new Date();
+	var year = date.getFullYear();
+	var month = date.getMonth() + 1;
+	var day = date.getDate();
+	var dateValue = year;
+	if(parseInt(month) >= 10)
+	{
+		dateValue = dateValue + "-" + month;
+	}
+	else 
+	{
+		dateValue = dateValue + "-0" + month;
+	}
+	if(parseInt(day) >= 10)
+	{
+		dateValue = dateValue + "-" + day;
+	}
+	else 
+	{
+		dateValue = dateValue + "-0" + day;
+	}
+	$("#date_setting").attr("value", dateValue);
+	// alert("date_setting = " + dateValue);
+	// Set Time
+	var hour = date.getHours();
+	var minute = date.getMinutes();
+	// var second = date.getSeconds();
+	var timeValue = ""
+	if(parseInt(hour) >= 10)
+	{
+		timeValue = hour;
+	}
+	else 
+	{
+		timeValue = "0" + hour;
+	}
+	if(parseInt(minute) >= 10)
+	{
+		timeValue = timeValue + ":" + minute;
+	}
+	else 
+	{
+		timeValue = timeValue + ":0" + minute;
+	}
+	$("#time_setting").attr("value", timeValue);
+	
 };
 var updateContent = function(url, fun) {
     var req = false;
@@ -246,6 +294,13 @@ $(document).ready(function(e){
 						    data-name="system-mgnt" name="system-mgnt" tab-id="tab-menu-ul-1559772315" 
 							ref-url="pages/system_setting.html" ifun="su">
 							   <span class="icon"></span><span class="text">系统设置</span>
+						 </a>
+				    </li>
+					<li class="fst selected" id="menu-advanced-sys-tools-li">
+					     <a class="fst none-sec selected" data-child="no" 
+						    data-name="system-mgnt" name="system-mgnt" tab-id="tab-menu-ul-1559772315" 
+							ref-url="pages/datetime_setting.html" ifun="su">
+							   <span class="icon"></span><span class="text">时间设置</span>
 						 </a>
 				    </li>
 					<li class="fst selected" id="menu-advanced-sys-tools-li">
