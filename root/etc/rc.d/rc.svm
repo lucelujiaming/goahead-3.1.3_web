@@ -23,12 +23,33 @@ else
     /bin/cp /tools/app.kif /data/svm/
   fi
   rm -rf /data/*.bin
+  # Set new IP
+  if [ -e "/data/svm/current_ip" ]; then
+    IPADDR=192.168.168.`cat /data/svm/current_ip`
+    /sbin/ifconfig eth0 down
+    /sbin/ifconfig eth0 inet $IPADDR netmask 255.255.255.0 up
+  fi
   # Change http server from httpdd to goahead 
   # /bin/httpdd --home /www 1>/dev/null 2>&1 &
-  cp /www/current_iprange /data/svm/
-  /bin/goahead --home /www &
+  if [ ! -e "/data/svm/current_iprange" ]; then
+    cp /www/current_iprange /data/svm/
+  fi
+  if [ ! -e "/data/svm/www" ]; then
+    mkdir -p /data/svm/www
+  fi
+  if [ ! -e "/data/svm/www/change_ip_address.sh" ]; then
+    cp /www/change_ip_address.sh /data/svm/www/
+  fi
+  if [ ! -e "/data/svm/www/stop_svm.sh" ]; then
+    cp /www/stop_svm.sh /data/svm/www/
+  fi
+  /bin/goahead --verbose --home /www > /data/svm/goahead_output.log &
   # Add stupid-ftpd as ftp server 
   /sbin/stupid-ftpd.Linux6 -f /etc/stupid-ftpd.conf
+  # Add mtd-utils
+  if [ ! -e "/data/mtd-utils" ]; then
+    cp -r /mtd-utils /data/
+  fi
   /usr/sbin/bacid 1>/dev/null 2>&1 &
   /usr/sbin/bacmd 1>/dev/null 2>&1 &
 

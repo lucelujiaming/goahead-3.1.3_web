@@ -7,8 +7,11 @@ if [ $# == 1 ] ; then
 	IPADDR=192.168.168.$1
 	/sbin/ifconfig eth0 down
 	/sbin/ifconfig eth0 inet $IPADDR netmask 255.255.255.0 up
-	/bin/httpd -c /etc/httpd.conf
-	/usr/sbin/svcled 1>/dev/null 2>&1 &
+	# kill /tools/svm /data/svm/app.scode /data/svm/app.sab
+	ps | grep "/tools/svm" | grep -v "grep" | awk '{print $1}' | sed "s/^/kill -9 /" | sh
+	# kill goahead
+	ps | grep "goahead" | grep -v "grep" | awk '{print $1}' | sed "s/^/kill -9 /" | sh
+	/bin/goahead --verbose --home /www > /data/svm/goahead_output.log &
 	sleep 1
 	killall telnetd
 	sleep 1
@@ -16,5 +19,4 @@ if [ $# == 1 ] ; then
 else
     echo "NG"
 fi
-
 
