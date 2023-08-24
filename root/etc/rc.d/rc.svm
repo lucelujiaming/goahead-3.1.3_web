@@ -29,6 +29,13 @@ else
     /sbin/ifconfig eth0 down
     /sbin/ifconfig eth0 inet $IPADDR netmask 255.255.255.0 up
   fi
+  # Set new MAC
+  if [ -e "/data/svm/current_mac" ]; then
+    MACADDR=`cat /data/svm/current_mac`
+    /sbin/ifconfig eth0 down
+    /sbin/ifconfig eth0 hw ether $MACADDR
+    /sbin/ifconfig eth0 up
+  fi
   # Change http server from httpdd to goahead 
   # /bin/httpdd --home /www 1>/dev/null 2>&1 &
   if [ ! -e "/data/svm/current_iprange" ]; then
@@ -37,11 +44,18 @@ else
   if [ ! -e "/data/svm/www" ]; then
     mkdir -p /data/svm/www
   fi
+  # Copy sh files
   if [ ! -e "/data/svm/www/change_ip_address.sh" ]; then
     cp /www/change_ip_address.sh /data/svm/www/
+    chmod 777 /data/svm/www/change_ip_address.sh
+  fi
+  if [ ! -e "/data/svm/www/change_mac_address.sh" ]; then
+    cp /www/change_mac_address.sh /data/svm/www/
+    chmod 777 /data/svm/www/change_mac_address.sh
   fi
   if [ ! -e "/data/svm/www/stop_svm.sh" ]; then
     cp /www/stop_svm.sh /data/svm/www/
+    chmod 777 /data/svm/www/stop_svm.sh
   fi
   /bin/goahead --verbose --home /www > /data/svm/goahead_output.log &
   # Add stupid-ftpd as ftp server 

@@ -173,14 +173,27 @@ void statusProc(Webs *wp)
         {
             sprintf(info_str, "/data/svm/www/change_ip_address.sh %s &", pValue);
             system(info_str);
+            // change_ip_address.sh would restart goahead, so we need not return websDone
         }
     }
-    else if(strcmp(pMode, "set_datetime") == 0)
+    else if(strcmp(pMode, "set_macaddress") == 0)
     {
-        memset(info_str, 0x00, 1024);
         pValue = websGetVar(wp, "value", "");
         trace(2, "statusProc::pValue = %s", pValue);
         websDone(wp);
+        
+        // if(strlen(pValue) == 17)
+        sprintf(info_str, "/data/svm/www/change_mac_address.sh %s &", pValue);
+        system(info_str);
+        // change_ip_address.sh would restart goahead, so we need not return websDone
+        websDone(wp);
+    }
+    else if(strcmp(pMode, "set_datetime") == 0)
+    {
+        pValue = websGetVar(wp, "value", "");
+        trace(2, "statusProc::pValue = %s", pValue);
+        websDone(wp);
+        memset(info_str, 0x00, 1024);
         sprintf(info_str, "date -s %s &", pValue);
         system(info_str);
     }
@@ -188,6 +201,25 @@ void statusProc(Webs *wp)
     {
         memset(info_str, 0x00, 1024);
         get_cmd_printf("cat /data/svm/current_iprange", info_str, 1024);
+        websWrite(wp, info_str);
+        websDone(wp);
+    }
+    else if(strcmp(pMode, "get_ipconfig") == 0)
+    {
+        memset(info_str, 0x00, 1024);
+        get_cmd_printf("cat /data/svm/current_ip", info_str, 1024);
+        // Use default value
+        if(strlen(info_str) == 0)
+        {
+            strcpy(info_str, "2");
+        }
+        websWrite(wp, info_str);
+        websDone(wp);
+    }
+    else if(strcmp(pMode, "get_macconfig") == 0)
+    {
+        memset(info_str, 0x00, 1024);
+        get_cmd_printf("cat /data/svm/current_mac", info_str, 1024);
         websWrite(wp, info_str);
         websDone(wp);
     }
