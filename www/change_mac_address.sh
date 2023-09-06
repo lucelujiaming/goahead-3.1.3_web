@@ -10,13 +10,14 @@ if [ $# == 1 ] ; then
 	/sbin/ifconfig eth0 up 
 	# kill /tools/svm /data/svm/app.scode /data/svm/app.sab
 	ps | grep "/tools/svm" | grep -v "grep" | awk '{print $1}' | sed "s/^/kill -9 /" | sh
-	# kill goahead
-	ps | grep "goahead" | grep -v "grep" | awk '{print $1}' | sed "s/^/kill -9 /" | sh
-	/bin/goahead --verbose --home /www > /data/svm/goahead_output.log &
 	# Restart telnetd.
 	killall telnetd
 	sleep 1
 	/etc/rc.d/rc.boot
+	# kill goahead
+	ps | grep "goahead" | grep -v "grep" | awk '{print $1}' | sed "s/^/kill -9 /" | sh
+	/bin/goahead --verbose --home /www > /data/svm/goahead_output.log &
+	sleep 1
 else
     echo "NG"
 fi

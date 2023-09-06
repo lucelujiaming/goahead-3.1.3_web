@@ -278,15 +278,19 @@ static void defineUploadVars(Webs *wp)
 
     file = wp->currentFile;
     fmt(key, sizeof(key), "FILE_CLIENT_FILENAME_%s", wp->uploadVar);
+	// trace(2, "[%s:%s:%d] set %s = %s", __FILE__, __FUNCTION__, __LINE__, key, file->clientFilename);
     websSetVar(wp, key, file->clientFilename);
 
     fmt(key, sizeof(key), "FILE_CONTENT_TYPE_%s", wp->uploadVar);
+	// trace(2, "[%s:%s:%d] set %s = %s", __FILE__, __FUNCTION__, __LINE__, key, file->contentType);
     websSetVar(wp, key, file->contentType);
 
     fmt(key, sizeof(key), "FILE_FILENAME_%s", wp->uploadVar);
+	// trace(2, "[%s:%s:%d] set %s = %s", __FILE__, __FUNCTION__, __LINE__, key, file->filename);
     websSetVar(wp, key, file->filename);
 
     fmt(key, sizeof(key), "FILE_SIZE_%s", wp->uploadVar);
+	// trace(2, "[%s:%s:%d] set %s = %d", __FILE__, __FUNCTION__, __LINE__, key, (int)file->size);
     websSetVarFmt(wp, key, "%d", (int) file->size);
 }
 
@@ -302,7 +306,7 @@ static int writeToFile(Webs *wp, char *data, ssize len)
         websError(wp, HTTP_CODE_REQUEST_TOO_LARGE, "Uploaded file exceeds maximum %d", (int) BIT_GOAHEAD_LIMIT_UPLOAD);
         return -1;
     }
-    trace(2, "[%s:%s:%d] log output: %d ", __FILE__, __FUNCTION__, __LINE__, len);
+    // trace(2, "[%s:%s:%d] log output: %d ", __FILE__, __FUNCTION__, __LINE__, len);
     if (len > 0) {
         /*  
             File upload. Write the file data.
@@ -312,7 +316,7 @@ static int writeToFile(Webs *wp, char *data, ssize len)
             return -1;
         }
         file->size += len;
-        trace(2, "uploadFilter: Wrote %d bytes to %s", len, wp->uploadTmp);
+        // trace(2, "uploadFilter: Wrote %d bytes to %s", len, wp->uploadTmp);
     }
     return 0;
 }
@@ -336,14 +340,14 @@ static int processContentData(Webs *wp)
     }
 
     if ((bp = getBoundary(wp, content->servp, size)) == 0) {
-        trace(2, "uploadFilter: Got boundary filename %x", wp->clientFilename);
+        // trace(2, "uploadFilter: Got boundary filename %x", wp->clientFilename);
         if (wp->clientFilename) {
             /*  
                 No signature found yet. probably more data to come. Must handle split boundaries.
              */
             data = content->servp;
             nbytes = ((int) (content->endp - data)) - (wp->boundaryLen - 1);
-            trace(2, "[%s:%s:%d] log output: %d ", __FILE__, __FUNCTION__, __LINE__, nbytes);
+            // trace(2, "[%s:%s:%d] log output: %d ", __FILE__, __FUNCTION__, __LINE__, nbytes);
             if (nbytes > 0 && writeToFile(wp, content->servp, nbytes) < 0) {
                 return -1;
             }

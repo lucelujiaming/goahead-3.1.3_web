@@ -240,9 +240,11 @@ PUBLIC int websOpen(char *documents, char *routeFile)
     if (!websDebug) {
         pruneId = websStartEvent(WEBS_SESSION_PRUNE, (WebsEventProc) pruneCache, 0);
     }
+	trace(2, "DBG -- websSetDocuments ");
     if (documents) {
         websSetDocuments(documents);
     }
+	trace(2, "DBG -- websOpenRoute ");
     if (websOpenRoute() < 0) {
         return -1;
     }
@@ -250,6 +252,8 @@ PUBLIC int websOpen(char *documents, char *routeFile)
     websCgiOpen();
 #endif
     websOptionsOpen();
+	trace(2, "DBG -- websActionOpen ");
+
     websActionOpen();
     websFileOpen();
 #if BIT_GOAHEAD_UPLOAD
@@ -781,10 +785,12 @@ static void readEvent(Webs *wp)
     websNoteRequestActivity(wp);
     rxbuf = &wp->rxbuf;
 
+    // trace(2, "DBG -- readEvent ");
     if (bufRoom(rxbuf) < (BIT_GOAHEAD_LIMIT_BUFFER + 1)) {
         if (!bufGrow(rxbuf, BIT_GOAHEAD_LIMIT_BUFFER + 1)) {
             websError(wp, HTTP_CODE_INTERNAL_SERVER_ERROR, "Can't grow rxbuf");
             websPump(wp);
+    		// trace(2, "DBG -- Can't grow rxbuf ");
             return;
         }
     }
@@ -811,6 +817,7 @@ static void readEvent(Webs *wp)
         sp = socketPtr(wp->sid);
         socketCreateHandler(wp->sid, sp->handlerMask | SOCKET_READABLE, socketEvent, wp);
     }
+    // trace(2, "DBG -- end of readEvent ");
 }
 
 
@@ -874,6 +881,7 @@ static bool parseIncoming(Webs *wp)
     trace(2, "DBG -- parseHeaders ");
     parseHeaders(wp);
     if (wp->state == WEBS_COMPLETE) {
+    	trace(2, "wp->state == WEBS_COMPLETE ");
         return 1;
     }
     wp->state = (wp->rxChunkState || wp->rxLen > 0) ? WEBS_CONTENT : WEBS_READY;
@@ -885,11 +893,13 @@ static bool parseIncoming(Webs *wp)
             wp->cgiStdin = websGetCgiCommName();
             if ((wp->cgifd = open(wp->cgiStdin, O_CREAT | O_WRONLY | O_BINARY, 0666)) < 0) {
                 websError(wp, HTTP_CODE_NOT_FOUND | WEBS_CLOSE, "Can't open CGI file");
+    			trace(2, "Can't open CGI file ");
                 return 1;
             }
         }
     }
 #endif
+    trace(2, "DBG -- wp->method =%s ", wp->method);
     if (smatch(wp->method, "PUT")) {
         WebsStat    sbuf;
         wp->code = (stat(wp->filename, &sbuf) == 0 && sbuf.st_mode & S_IFDIR) ? HTTP_CODE_NO_CONTENT : HTTP_CODE_CREATED;
@@ -898,10 +908,12 @@ static bool parseIncoming(Webs *wp)
             error("Can't create PUT filename %s", wp->putname);
             websError(wp, HTTP_CODE_INTERNAL_SERVER_ERROR, "Can't create the put URI");
             wfree(wp->putname);
+    			trace(2, "Can't create the put URI");
             return 1;
         }
     }
 #endif
+    trace(2, "DBG -- parseIncoming return 1 ");
     return 1;
 }
 
@@ -1057,11 +1069,17 @@ static void parseHeaders(Webs *wp)
             wp->rxLen = atoi(value);
             if (smatch(wp->method, "PUT")) {
                 if (wp->rxLen > BIT_GOAHEAD_LIMIT_PUT) {
+                    trace(2, "[%s:%s:%d] wp->rxLen = %d", __FILE__, __FUNCTION__, __LINE__, wp->rxLen);
+                    trace(2, "[%s:%s:%d] BIT_GOAHEAD_LIMIT_PUT = %d", 
+                              __FILE__, __FUNCTION__, __LINE__, BIT_GOAHEAD_LIMIT_PUT);
                     websError(wp, HTTP_CODE_REQUEST_TOO_LARGE | WEBS_CLOSE, "Too big");
                     return;
                 }
             } else {
                 if (wp->rxLen > BIT_GOAHEAD_LIMIT_POST) {
+                    trace(2, "[%s:%s:%d] wp->rxLen = %d", __FILE__, __FUNCTION__, __LINE__, wp->rxLen);
+                    trace(2, "[%s:%s:%d] BIT_GOAHEAD_LIMIT_POST = %d", 
+                              __FILE__, __FUNCTION__, __LINE__, BIT_GOAHEAD_LIMIT_POST);
                     websError(wp, HTTP_CODE_REQUEST_TOO_LARGE | WEBS_CLOSE, "Too big");
                     return;
                 }

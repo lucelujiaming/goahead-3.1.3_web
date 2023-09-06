@@ -395,6 +395,7 @@ WebsTime websCgiPoll()
                 wfree(cgip->stdOut);
                 wfree(cgip);
                 websPump(wp);
+    			// trace(2, "DBG -- end of websCgiPoll ");
             }
         }
     }

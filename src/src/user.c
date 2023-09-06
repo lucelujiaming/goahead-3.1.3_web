@@ -67,24 +67,78 @@ static int get_cmd_printf(char *cmd, char *buf, int bufSize)
 char* get_last_modify_time(char* path, char* time_str)
 {
     struct stat stat_buf;
-    trace(2, "get_last_modify_time path = %s", path);
+    trace(2, "[%s:%s:%d] get_last_modify_time path = %s", __FILE__, __FUNCTION__, __LINE__, path);
     if(stat(path,&stat_buf)==0)
     {
         time_t last_modify_time=stat_buf.st_mtime;
-        trace(2, "path = %s", path);
-        trace(2, "last_modify_time = %ld", last_modify_time);
-	sprintf(time_str, "%ld", last_modify_time);
+        trace(2, "[%s:%s:%d] path = %s and last_modify_time = %ld"
+			, __FILE__, __FUNCTION__, __LINE__, path, last_modify_time);
+        sprintf(time_str, "%ld", last_modify_time);
         return ctime(&last_modify_time);
     }
     else
     {
-	sprintf(time_str, "Unknown");
-        trace(2, "path error");
+        sprintf(time_str, "Unknown");
+        trace(2, "[%s:%s:%d] path error", __FILE__, __FUNCTION__, __LINE__);
     }
     return NULL;
 }
 
 #define  APP_PATH_LEN    128
+int get_ver_from_cmdline(char* cmd_line, char * ver_info)
+{
+    char *ver_start_pos = strstr(cmd_line, "ver=");
+    if (ver_start_pos)
+    {
+        char *ver_end_pos = strchr(ver_start_pos + strlen("ver="), ' ');
+        if (ver_end_pos)
+        {
+            strncpy(ver_info, ver_start_pos + strlen("ver="), 
+                ver_end_pos - ver_start_pos - strlen("ver="));
+            return 1;
+        }
+        else
+        {
+            strcpy(ver_info, ver_start_pos + strlen("ver="));
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int get_uboot_version(char * ver_info)
+{
+    char cmdline_string[APP_PATH_LEN] = "";
+    memset(ver_info, 0x00, APP_PATH_LEN);
+    get_cmd_printf("cat /proc/cmdline", cmdline_string, APP_PATH_LEN);
+    
+    return get_ver_from_cmdline(cmdline_string, ver_info);
+}
+
+int get_kernel_version(char * ver_info)
+{
+    char kernel_name_string[APP_PATH_LEN] = "";
+    memset(kernel_name_string, 0x00, APP_PATH_LEN);
+    get_cmd_printf("uname -s", kernel_name_string, APP_PATH_LEN);
+    
+    char kernel_release_string[APP_PATH_LEN] = "";
+    memset(kernel_release_string, 0x00, APP_PATH_LEN);
+    get_cmd_printf("uname -r", kernel_release_string, APP_PATH_LEN);
+    
+    char kernel_version_string[APP_PATH_LEN] = "";
+    memset(kernel_version_string, 0x00, APP_PATH_LEN);
+    get_cmd_printf("uname -v", kernel_version_string, APP_PATH_LEN);
+    
+    sprintf(ver_info, "%s %s %s", kernel_name_string, kernel_release_string, kernel_version_string);
+    return 1; 
+}
+
+int get_machine_name(char * machine_name_info)
+{
+    get_cmd_printf("uname -m", machine_name_info, APP_PATH_LEN);
+    return 1; 
+}
+
 char* initProc()
 {
     char *pVal;
@@ -120,6 +174,10 @@ char* initProc()
     char filetime_string[APP_PATH_LEN] = "";
     char status_string[APP_PATH_LEN] = "";
 
+    char uboot_version[APP_PATH_LEN] = "";
+    char kernel_version[APP_PATH_LEN] = "";
+    char machine_name[APP_PATH_LEN] = "";
+
     get_cmd_printf("cat /etc/VERSION", version_string, APP_PATH_LEN);
     pVal = get_last_modify_time("/data/svm/app.sab", filetime_string);
     get_cmd_printf("ps | grep 'app.scode' | grep -v grep", status_string, APP_PATH_LEN);
@@ -131,14 +189,27 @@ char* initProc()
     {
         strcpy(status_string, "shutdown");
     }
+
+    int iRet = get_uboot_version(uboot_version);
+    if(iRet == 0)
+    {
+        strcpy(uboot_version, "unknown");
+    }
+    iRet = get_kernel_version(kernel_version);
+    if(iRet == 0)
+    {
+        strcpy(kernel_version, "unknown");
+    }
+    iRet = get_machine_name(machine_name);
+    
     ret_str = (char *)malloc(1024);
     if(ret_str)
     {
-        sprintf(ret_str, "{ \"version\": \"%s\", \"buildtime\": \"%s\", \"status\": \"%s\" }", 
-           version_string, filetime_string, status_string);
+        sprintf(ret_str, "{ \"version\": \"%s\", \"buildtime\": \"%s\", \"status\": \"%s\", \"uboot\": \"%s\", \"kernel\": \"%s\", \"machine\": \"%s\" }", 
+           version_string, filetime_string, status_string, uboot_version, kernel_version, machine_name);
     }
 #endif
-    trace(2, "ret_str = %s", ret_str);
+    trace(2, "[%s:%s:%d] ret_str = %s", __FILE__, __FUNCTION__, __LINE__, ret_str);
     return ret_str;
 }
 
@@ -151,7 +222,7 @@ void statusProc(Webs *wp)
     char info_str[1024];
 
     pMode = websGetVar(wp, "mode", "");
-    trace(2, "statusProc::pVal = %s", pMode);
+    trace(2, "[%s:%s:%d] statusProc::pVal = %s", __FILE__, __FUNCTION__, __LINE__, pMode);
 
     if(strcmp(pMode, "init") == 0)
     {
@@ -166,7 +237,7 @@ void statusProc(Webs *wp)
     else if(strcmp(pMode, "set_ipaddress") == 0)
     {
         pValue = websGetVar(wp, "value", "");
-        trace(2, "statusProc::pValue = %s", pValue);
+        trace(2, "[%s:%s:%d] statusProc::pValue = %s", __FILE__, __FUNCTION__, __LINE__, pValue);
         websDone(wp);
         iValue = atoi(pValue);
         if(iValue > 1 && iValue < 255)
@@ -179,7 +250,7 @@ void statusProc(Webs *wp)
     else if(strcmp(pMode, "set_macaddress") == 0)
     {
         pValue = websGetVar(wp, "value", "");
-        trace(2, "statusProc::pValue = %s", pValue);
+        trace(2, "[%s:%s:%d] statusProc::pValue = %s", __FILE__, __FUNCTION__, __LINE__, pValue);
         websDone(wp);
         
         // if(strlen(pValue) == 17)
@@ -191,7 +262,7 @@ void statusProc(Webs *wp)
     else if(strcmp(pMode, "set_datetime") == 0)
     {
         pValue = websGetVar(wp, "value", "");
-        trace(2, "statusProc::pValue = %s", pValue);
+        trace(2, "[%s:%s:%d] statusProc::pValue = %s", __FILE__, __FUNCTION__, __LINE__, pValue);
         websDone(wp);
         memset(info_str, 0x00, 1024);
         sprintf(info_str, "date -s %s &", pValue);
@@ -236,39 +307,58 @@ void sumbitProc(Webs *wp)
 
 int check_uploadfile(Webs *wp)
 {
+    char            key[64];
+	
     char app_sab_str[APP_PATH_LEN] = "";
     char app_scode_str[APP_PATH_LEN] = "";
+    char app_firmware_str[APP_PATH_LEN] = "";
     struct stat stat_buf;
-    char *pVal;
+    char *pPathVal;
+    char *pFileNameVal;
 
-    pVal = websGetVar(wp, "UPLOAD_DIR", "/data");
-    trace(2, "[%s:%s:%d] pVal = %s", __FILE__, __FUNCTION__, __LINE__, pVal);
+    pPathVal = websGetVar(wp, "UPLOAD_DIR", "/data");
+    trace(2, "[%s:%s:%d] pVal = %s", __FILE__, __FUNCTION__, __LINE__, pPathVal);
 
-    sprintf(app_sab_str, "%s/app.sab", pVal);
-    sprintf(app_scode_str, "%s/app.scode", pVal);
+    sprintf(app_sab_str, "%s/app.sab", pPathVal);
+    sprintf(app_scode_str, "%s/app.scode", pPathVal);
+	// Get filename
+    fmt(key, sizeof(key), "FILE_CLIENT_FILENAME_%s", wp->uploadVar);
+    pFileNameVal = websGetVar(wp, key, "");
+    char *filename_start_pos = strstr(pFileNameVal, "firmware_V");
+    if (filename_start_pos)
+    {
+    	sprintf(app_firmware_str, "%s/%s", pPathVal, pFileNameVal);
+    }
+	
     if(stat(app_sab_str, &stat_buf)==0)
     {
-        system("/data/svm/www/stop_svm.sh &");
         memset(app_sab_str, 0x00, APP_PATH_LEN);
-        sprintf(app_sab_str, "mv %s/app.sab /data/svm/", pVal);
+        sprintf(app_sab_str, "mv %s/app.sab /data/svm/", pPathVal);
         system(app_sab_str);
         system("chmod 664 /data/svm/app.sab");
-        system("/etc/rc.d/rc.svm &");
-        trace(2, "uploadProc :: update by %s", app_sab_str);
+        // Stop svm and watch dog would restart svm
+        system("/data/svm/www/stop_svm.sh &");
+        // system("/etc/rc.d/rc.svm &");
+        trace(2, "[%s:%s:%d] uploadProc :: update by %s", __FILE__, __FUNCTION__, __LINE__, app_sab_str);
     }
     else if(stat(app_scode_str, &stat_buf)==0)
     {
-        system("/data/svm/www/stop_svm.sh &");
         memset(app_scode_str, 0x00, APP_PATH_LEN);
-        sprintf(app_scode_str, "mv %s/app.scode /data/svm/", pVal);
+        sprintf(app_scode_str, "mv %s/app.scode /data/svm/", pPathVal);
         system(app_scode_str);
         system("chmod 664 /data/svm/app.scode");
-        system("/etc/rc.d/rc.svm &");
-        trace(2, "uploadProc :: update by %s", app_scode_str);
+        // Stop svm and watch dog would restart svm
+        system("/data/svm/www/stop_svm.sh &");
+        // system("/etc/rc.d/rc.svm &");
+        trace(2, "[%s:%s:%d] uploadProc :: update by %s", __FILE__, __FUNCTION__, __LINE__, app_scode_str);
+    }
+    else if(stat(app_firmware_str, &stat_buf)==0)
+    {
+        trace(2, "[%s:%s:%d] uploadProc :: update by %s", __FILE__, __FUNCTION__, __LINE__, app_firmware_str);
     }
     else
     {
-        trace(2, "uploadProc :: update error");
+        trace(2, "[%s:%s:%d] uploadProc :: update error", __FILE__, __FUNCTION__, __LINE__);
         return 1;
     }
     return 0;
