@@ -24,6 +24,35 @@
 
 #include    "cJSON.h"
 
+// Fireware decode macro and struct
+#define FIRMWARE_MAGIC 0x55005678
+
+#define FIRMWARE_SYSLOADER_KEY  's'
+#define FIRMWARE_UBOOT_KEY      'u'
+#define FIRMWARE_KERNEL_KEY     'k'
+#define FIRMWARE_ROOTFS_KEY     'r'
+
+#define FIRMWARE_SYSLOADER_FILENAME  "sramloader.bin"
+#define FIRMWARE_UBOOT_FILENAME      "u-boot.bin"
+#define FIRMWARE_KERNEL_FILENAME     "uImage"
+#define FIRMWARE_ROOTFS_FILENAME     "rootfs.cramfs"
+
+typedef struct {
+    unsigned int magic;
+    unsigned int len;
+    unsigned short s_sum;
+    unsigned short u_sum;
+    unsigned short k_sum;
+    unsigned short r_sum;
+    unsigned int s_len;
+    unsigned int u_len;
+    unsigned int k_len;
+    unsigned int r_len;
+    char version[16];
+    char btime[16];
+} FIRMWARE_T;
+// Fireware decode macro and struct end
+
 static int get_cmd_printf(char *cmd, char *buf, int bufSize)
 {
     FILE *fp;
@@ -305,6 +334,180 @@ void sumbitProc(Webs *wp)
     
 }
 
+int calc_align(int value , int align)
+{
+    return (value + align -1) & (~(align -1));
+}
+
+static unsigned short gen_sum(unsigned char key, char * file_pos, unsigned int filelen)
+{
+    unsigned char key1 = key;
+    unsigned char key2 = key;
+
+    unsigned int i;
+
+    if (filelen == 0)
+        return 0;
+
+    for(i=0; i<filelen; i++) {
+        if (file_pos[i] == (char)key) {
+            key2 += 1;
+        } else {
+            key1 ^= file_pos[i];
+        }
+    }
+    return (unsigned short)key1 + ((unsigned short)key2 << 8);
+}
+
+int decode_firmware(char *cFileName, char *outputPath)
+{
+    int iFileLen = 0, iFileAlignLen = 0;
+    struct stat st;
+
+    char outFilePath[128];
+
+    FIRMWARE_T firmware_head;
+
+    if (lstat(cFileName, &st) < 0) {
+        printf("lstat failed: %s\r\n", cFileName);
+    	return 0;
+    }
+    iFileLen = st.st_size;
+    iFileAlignLen = calc_align(iFileLen, 1024);
+    
+    char *buf = NULL;
+    buf = (char *)malloc(iFileAlignLen);
+    memset(buf, 0, iFileAlignLen);
+
+    FILE * fp = fopen(cFileName, "r");
+    if(fp < 0)
+    {
+        free(buf);
+        printf("open failed: %s\r\n", cFileName);
+    	return 0;
+    }
+
+    int n = fread(buf, sizeof(char), iFileLen, fp);
+
+    memcpy(&firmware_head, buf, sizeof(FIRMWARE_T));
+    if(firmware_head.magic != FIRMWARE_MAGIC)
+    {
+        free(buf);
+        fclose(fp);
+        printf("Error FIRMWARE_MAGIC\n");
+    	return 0;
+    }
+    // Check sysloader sum
+    unsigned short uCheckSum = gen_sum(FIRMWARE_SYSLOADER_KEY, 
+                    buf + sizeof(FIRMWARE_T), 
+                    firmware_head.s_len);
+    if(uCheckSum != firmware_head.s_sum)
+    {
+        free(buf);
+        fclose(fp);
+        printf("Error s_num\n");
+    	return 0;
+    }
+
+    // Check u-boot sum
+    uCheckSum = gen_sum(FIRMWARE_UBOOT_KEY, 
+                    buf + sizeof(FIRMWARE_T) + firmware_head.s_len, 
+                    firmware_head.u_len);
+    if(uCheckSum != firmware_head.u_sum)
+    {
+        free(buf);
+        fclose(fp);
+        printf("Error u_num\n");
+    	return 0;
+    }
+
+    // Check kernel sum
+    uCheckSum = gen_sum(FIRMWARE_KERNEL_KEY, 
+                    buf + sizeof(FIRMWARE_T) + firmware_head.s_len + firmware_head.u_len, 
+                    firmware_head.k_len);
+    if(uCheckSum != firmware_head.k_sum)
+    {
+        free(buf);
+        fclose(fp);
+        printf("Error k_num\n");
+    	return 0;
+    }
+
+    // Check rootfs sum
+    uCheckSum = gen_sum(FIRMWARE_ROOTFS_KEY, 
+                    buf + sizeof(FIRMWARE_T) + firmware_head.s_len + firmware_head.u_len + firmware_head.k_len, 
+                    firmware_head.r_len);
+    if(uCheckSum != firmware_head.r_sum)
+    {
+        free(buf);
+        fclose(fp);
+        printf("Error r_num\n");
+    	return 0;
+    }
+
+    // unpacked sysloader
+    sprintf(outFilePath, "%s/%s", outputPath, FIRMWARE_SYSLOADER_FILENAME);
+    FILE * fpSysloader = fopen(outFilePath, "w");
+    if(fpSysloader < 0)
+    {
+        free(buf);
+        fclose(fp);
+        printf("open failed: %s\r\n", FIRMWARE_SYSLOADER_FILENAME);
+        return 0;
+    }
+    fwrite(buf + sizeof(FIRMWARE_T), sizeof(char), firmware_head.s_len, fpSysloader);
+    fclose(fpSysloader);
+    printf("Unpack success: %s\r\n", FIRMWARE_SYSLOADER_FILENAME);
+
+    // unpacked u-boot 
+    sprintf(outFilePath, "%s/%s", outputPath, FIRMWARE_UBOOT_FILENAME);
+    FILE * fpUboot = fopen(outFilePath, "w");
+    if(fp < 0)
+    {
+        free(buf);
+        fclose(fp);
+        printf("open failed: %s\r\n", FIRMWARE_UBOOT_FILENAME);
+        return 0;
+    }
+    fwrite(buf + sizeof(FIRMWARE_T) + firmware_head.s_len, sizeof(char), firmware_head.u_len, fpUboot);
+    fclose(fpUboot);
+    printf("Unpack success: %s\r\n", FIRMWARE_UBOOT_FILENAME);
+
+    // unpacked kernel 
+    sprintf(outFilePath, "%s/%s", outputPath, FIRMWARE_KERNEL_FILENAME);
+    FILE * fpKernel = fopen(outFilePath, "w");
+    if(fpKernel < 0)
+    {
+        free(buf);
+        fclose(fp);
+        printf("open failed: %s\r\n", FIRMWARE_KERNEL_FILENAME);
+        return 0;
+    }
+    fwrite(buf + sizeof(FIRMWARE_T) + firmware_head.s_len + firmware_head.u_len, 
+                sizeof(char), firmware_head.k_len, fpKernel);
+    fclose(fpKernel);
+    printf("Unpack success: %s\r\n", FIRMWARE_KERNEL_FILENAME);
+
+    // unpacked rootfs 
+    sprintf(outFilePath, "%s/%s", outputPath, FIRMWARE_ROOTFS_FILENAME);
+    FILE * fpRootfs = fopen(outFilePath, "w");
+    if(fpRootfs < 0)
+    {
+        free(buf);
+        fclose(fp);
+        printf("open failed: %s\r\n", FIRMWARE_ROOTFS_FILENAME);
+        return 0;
+    }
+    fwrite(buf + sizeof(FIRMWARE_T) + firmware_head.s_len + firmware_head.u_len + firmware_head.k_len, 
+                sizeof(char), firmware_head.r_len, fpRootfs);
+    fclose(fpRootfs);
+    printf("Unpack success: %s\r\n", FIRMWARE_ROOTFS_FILENAME);
+
+    free(buf);
+    fclose(fp);
+    return 1;
+}
+
 int check_uploadfile(Webs *wp)
 {
     char            key[64];
@@ -316,7 +519,7 @@ int check_uploadfile(Webs *wp)
     char *pPathVal;
     char *pFileNameVal;
 
-    pPathVal = websGetVar(wp, "UPLOAD_DIR", "/data");
+    pPathVal = websGetVar(wp, "UPLOAD_DIR", "/data/upload");
     trace(2, "[%s:%s:%d] pVal = %s", __FILE__, __FUNCTION__, __LINE__, pPathVal);
 
     sprintf(app_sab_str, "%s/app.sab", pPathVal);
@@ -354,7 +557,21 @@ int check_uploadfile(Webs *wp)
     }
     else if(stat(app_firmware_str, &stat_buf)==0)
     {
-        trace(2, "[%s:%s:%d] uploadProc :: update by %s", __FILE__, __FUNCTION__, __LINE__, app_firmware_str);
+        int iRet = decode_firmware(app_firmware_str, pPathVal);
+        if(iRet == 1)
+        {
+            remove(app_firmware_str);
+            trace(2, "[%s:%s:%d] uploadProc :: update and unpack by %s", 
+                            __FILE__, __FUNCTION__, __LINE__, app_firmware_str);
+
+            system("/data/svm/www/update_firmware.sh ");
+            trace(2, "[%s:%s:%d] uploadProc :: update finish by %s (This should never print)", 
+                            __FILE__, __FUNCTION__, __LINE__, app_firmware_str);
+            
+        }
+        trace(2, "[%s:%s:%d] uploadProc :: update %s error", 
+                            __FILE__, __FUNCTION__, __LINE__, app_firmware_str);
+        return 1;
     }
     else
     {
