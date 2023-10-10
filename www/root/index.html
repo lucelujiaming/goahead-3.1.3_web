@@ -50,7 +50,7 @@ var checkIPAddress = function() {
     var ip_address = $("#new_ip_address")[0].value;
     if (!ip_address || ip_address.length == 0) {
         ip_address_status = 1;
-    } else if (/\d+/.test(ip_address)) {
+    } else if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip_address)) {
         ip_address_status = 0;
     } else {
         ip_address_status = 2;
@@ -123,6 +123,7 @@ funs["su"] = function() {
     });
 	// IP设置
     $("button#set_ipaddress").on("click", function(e){
+		checkIPAddress();
         if (ip_address_status == 0)
         {
 			var ip_address = $("#new_ip_address")[0].value;
@@ -136,7 +137,8 @@ funs["su"] = function() {
 				$("div.loading-container#loading-container").css("display", "none");
 				$("div.mask#mask").css("display", "none");
 				alert("设置成功");
-				self.location='http://192.168.168.' + ip_address;
+				// self.location='http://192.168.168.' + ip_address;
+				self.location='http://' + ip_address;
             };
             var waitforIPSetDone = function() {
 				setTimeout(updateIPAddress, 2000);
@@ -145,7 +147,7 @@ funs["su"] = function() {
             waitforIPSetDone();
         }
         else if (ip_address_status == 1)
-        {
+        {    
 			alert("ip_address_status = " + ip_address_status);
             $("div.error-tips-content").html("IP地址格式错误");
             $("div.widget-error-tips").css("display", "block");
@@ -245,19 +247,14 @@ funs["su"] = function() {
             }
         });
     });
-	// 获取IP地址段
-    $.get("/action/status?mode=get_iprange", function(_data, _status){
-		// alert("get_iprange = " + _data);
-		$("#ip_range").attr("value", _data);
-    });
-	// 获取IP地址设定
+	// 获取IP地址
     $.get("/action/status?mode=get_ipconfig", function(_data, _status){
-		// alert("get_iprange = " + _data);
+		// alert("get_ipconfig = " + _data);
 		$("#new_ip_address").attr("value", _data);
     });
 	// 获取MAC地址设定
     $.get("/action/status?mode=get_macconfig", function(_data, _status){
-		// alert("get_iprange = " + _data);
+		// alert("get_macconfig = " + _data);
 		$("#new_mac_address").attr("value", _data);
     });
 	

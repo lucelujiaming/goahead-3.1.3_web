@@ -4,7 +4,7 @@
 if [ $# == 1 ] ; then
 	echo -n $1 > /data/svm/current_ip
 	/usr/bin/killall5 udhcpc
-	IPADDR=192.168.168.$1
+	IPADDR=$1
 	/sbin/ifconfig eth0 down
 	/sbin/ifconfig eth0 inet $IPADDR netmask 255.255.255.0 up
 	# kill /tools/svm /data/svm/app.scode /data/svm/app.sab

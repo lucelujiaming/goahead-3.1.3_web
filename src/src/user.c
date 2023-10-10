@@ -268,13 +268,10 @@ void statusProc(Webs *wp)
         pValue = websGetVar(wp, "value", "");
         trace(2, "[%s:%s:%d] statusProc::pValue = %s", __FILE__, __FUNCTION__, __LINE__, pValue);
         websDone(wp);
-        iValue = atoi(pValue);
-        if(iValue > 1 && iValue < 255)
-        {
-            sprintf(info_str, "/data/svm/www/change_ip_address.sh %s &", pValue);
-            system(info_str);
-            // change_ip_address.sh would restart goahead, so we need not return websDone
-        }
+		
+        sprintf(info_str, "/data/svm/www/change_ip_address.sh %s &", pValue);
+        system(info_str);
+        // change_ip_address.sh would restart goahead, so we need not return websDone
     }
     else if(strcmp(pMode, "set_macaddress") == 0)
     {
@@ -293,16 +290,11 @@ void statusProc(Webs *wp)
         pValue = websGetVar(wp, "value", "");
         trace(2, "[%s:%s:%d] statusProc::pValue = %s", __FILE__, __FUNCTION__, __LINE__, pValue);
         websDone(wp);
+		// Secona would change the RTC device, 
+		// so we have to stop svm and use /etc/rc.d/rc.svm to sync /dev/rtc0.
         memset(info_str, 0x00, 1024);
-        sprintf(info_str, "date -s %s &", pValue);
+        sprintf(info_str, "/data/svm/www/change_datetime.sh %s &", pValue);
         system(info_str);
-    }
-    else if(strcmp(pMode, "get_iprange") == 0)
-    {
-        memset(info_str, 0x00, 1024);
-        get_cmd_printf("cat /data/svm/current_iprange", info_str, 1024);
-        websWrite(wp, info_str);
-        websDone(wp);
     }
     else if(strcmp(pMode, "get_ipconfig") == 0)
     {
@@ -445,64 +437,76 @@ int decode_firmware(char *cFileName, char *outputPath)
     	return 0;
     }
 
-    // unpacked sysloader
-    sprintf(outFilePath, "%s/%s", outputPath, FIRMWARE_SYSLOADER_FILENAME);
-    FILE * fpSysloader = fopen(outFilePath, "w");
-    if(fpSysloader < 0)
+    if(firmware_head.s_len > 0)
     {
-        free(buf);
-        fclose(fp);
-        printf("open failed: %s\r\n", FIRMWARE_SYSLOADER_FILENAME);
-        return 0;
+        // unpacked sysloader
+        sprintf(outFilePath, "%s/%s", outputPath, FIRMWARE_SYSLOADER_FILENAME);
+        FILE * fpSysloader = fopen(outFilePath, "w");
+        if(fpSysloader < 0)
+        {
+            free(buf);
+            fclose(fp);
+            printf("open failed: %s\r\n", FIRMWARE_SYSLOADER_FILENAME);
+            return 0;
+        }
+        fwrite(buf + sizeof(FIRMWARE_T), sizeof(char), firmware_head.s_len, fpSysloader);
+        fclose(fpSysloader);
+        printf("Unpack success: %s\r\n", FIRMWARE_SYSLOADER_FILENAME);
     }
-    fwrite(buf + sizeof(FIRMWARE_T), sizeof(char), firmware_head.s_len, fpSysloader);
-    fclose(fpSysloader);
-    printf("Unpack success: %s\r\n", FIRMWARE_SYSLOADER_FILENAME);
 
-    // unpacked u-boot 
-    sprintf(outFilePath, "%s/%s", outputPath, FIRMWARE_UBOOT_FILENAME);
-    FILE * fpUboot = fopen(outFilePath, "w");
-    if(fp < 0)
+    if(firmware_head.u_len > 0)
     {
-        free(buf);
-        fclose(fp);
-        printf("open failed: %s\r\n", FIRMWARE_UBOOT_FILENAME);
-        return 0;
+        // unpacked u-boot 
+        sprintf(outFilePath, "%s/%s", outputPath, FIRMWARE_UBOOT_FILENAME);
+        FILE * fpUboot = fopen(outFilePath, "w");
+        if(fp < 0)
+        {
+            free(buf);
+            fclose(fp);
+            printf("open failed: %s\r\n", FIRMWARE_UBOOT_FILENAME);
+            return 0;
+        }
+        fwrite(buf + sizeof(FIRMWARE_T) + firmware_head.s_len, sizeof(char), firmware_head.u_len, fpUboot);
+        fclose(fpUboot);
+        printf("Unpack success: %s\r\n", FIRMWARE_UBOOT_FILENAME);
     }
-    fwrite(buf + sizeof(FIRMWARE_T) + firmware_head.s_len, sizeof(char), firmware_head.u_len, fpUboot);
-    fclose(fpUboot);
-    printf("Unpack success: %s\r\n", FIRMWARE_UBOOT_FILENAME);
 
-    // unpacked kernel 
-    sprintf(outFilePath, "%s/%s", outputPath, FIRMWARE_KERNEL_FILENAME);
-    FILE * fpKernel = fopen(outFilePath, "w");
-    if(fpKernel < 0)
+    if(firmware_head.k_len > 0)
     {
-        free(buf);
-        fclose(fp);
-        printf("open failed: %s\r\n", FIRMWARE_KERNEL_FILENAME);
-        return 0;
+        // unpacked kernel 
+        sprintf(outFilePath, "%s/%s", outputPath, FIRMWARE_KERNEL_FILENAME);
+        FILE * fpKernel = fopen(outFilePath, "w");
+        if(fpKernel < 0)
+        {
+            free(buf);
+            fclose(fp);
+            printf("open failed: %s\r\n", FIRMWARE_KERNEL_FILENAME);
+            return 0;
+        }
+        fwrite(buf + sizeof(FIRMWARE_T) + firmware_head.s_len + firmware_head.u_len, 
+                    sizeof(char), firmware_head.k_len, fpKernel);
+        fclose(fpKernel);
+        printf("Unpack success: %s\r\n", FIRMWARE_KERNEL_FILENAME);
     }
-    fwrite(buf + sizeof(FIRMWARE_T) + firmware_head.s_len + firmware_head.u_len, 
-                sizeof(char), firmware_head.k_len, fpKernel);
-    fclose(fpKernel);
-    printf("Unpack success: %s\r\n", FIRMWARE_KERNEL_FILENAME);
 
-    // unpacked rootfs 
-    sprintf(outFilePath, "%s/%s", outputPath, FIRMWARE_ROOTFS_FILENAME);
-    FILE * fpRootfs = fopen(outFilePath, "w");
-    if(fpRootfs < 0)
+    if(firmware_head.r_len > 0)
     {
-        free(buf);
-        fclose(fp);
-        printf("open failed: %s\r\n", FIRMWARE_ROOTFS_FILENAME);
-        return 0;
+        // unpacked rootfs 
+        sprintf(outFilePath, "%s/%s", outputPath, FIRMWARE_ROOTFS_FILENAME);
+        FILE * fpRootfs = fopen(outFilePath, "w");
+        if(fpRootfs < 0)
+        {
+            free(buf);
+            fclose(fp);
+            printf("open failed: %s\r\n", FIRMWARE_ROOTFS_FILENAME);
+            return 0;
+        }
+        fwrite(buf + sizeof(FIRMWARE_T) + firmware_head.s_len + firmware_head.u_len + firmware_head.k_len, 
+                    sizeof(char), firmware_head.r_len, fpRootfs);
+        fclose(fpRootfs);
+        printf("Unpack success: %s\r\n", FIRMWARE_ROOTFS_FILENAME);
     }
-    fwrite(buf + sizeof(FIRMWARE_T) + firmware_head.s_len + firmware_head.u_len + firmware_head.k_len, 
-                sizeof(char), firmware_head.r_len, fpRootfs);
-    fclose(fpRootfs);
-    printf("Unpack success: %s\r\n", FIRMWARE_ROOTFS_FILENAME);
-
+	
     free(buf);
     fclose(fp);
     return 1;
@@ -542,7 +546,8 @@ int check_uploadfile(Webs *wp)
         // Stop svm and watch dog would restart svm
         system("/data/svm/www/stop_svm.sh &");
         // system("/etc/rc.d/rc.svm &");
-        trace(2, "[%s:%s:%d] uploadProc :: update by %s", __FILE__, __FUNCTION__, __LINE__, app_sab_str);
+        trace(2, "[%s:%s:%d] uploadProc :: update by %s", 
+        				__FILE__, __FUNCTION__, __LINE__, app_sab_str);
     }
     else if(stat(app_scode_str, &stat_buf)==0)
     {
@@ -553,29 +558,28 @@ int check_uploadfile(Webs *wp)
         // Stop svm and watch dog would restart svm
         system("/data/svm/www/stop_svm.sh &");
         // system("/etc/rc.d/rc.svm &");
-        trace(2, "[%s:%s:%d] uploadProc :: update by %s", __FILE__, __FUNCTION__, __LINE__, app_scode_str);
+        trace(2, "[%s:%s:%d] uploadProc :: update by %s", 
+        					__FILE__, __FUNCTION__, __LINE__, app_scode_str);
     }
     else if(stat(app_firmware_str, &stat_buf)==0)
     {
-        int iRet = decode_firmware(app_firmware_str, pPathVal);
-        if(iRet == 1)
-        {
-            remove(app_firmware_str);
-            trace(2, "[%s:%s:%d] uploadProc :: update and unpack by %s", 
-                            __FILE__, __FUNCTION__, __LINE__, app_firmware_str);
-
-            system("/data/svm/www/update_firmware.sh ");
-            trace(2, "[%s:%s:%d] uploadProc :: update finish by %s (This should never print)", 
-                            __FILE__, __FUNCTION__, __LINE__, app_firmware_str);
-            
-        }
+    	int iRet = decode_firmware(app_firmware_str, pPathVal);
+		if(iRet == 1)
+		{
+			remove(app_firmware_str);
+            trace(2, "[%s:%s:%d] uploadProc :: update by %s", 
+							__FILE__, __FUNCTION__, __LINE__, app_firmware_str);
+			
+			
+		}
         trace(2, "[%s:%s:%d] uploadProc :: update %s error", 
-                            __FILE__, __FUNCTION__, __LINE__, app_firmware_str);
+        					__FILE__, __FUNCTION__, __LINE__, app_firmware_str);
         return 1;
     }
     else
     {
-        trace(2, "[%s:%s:%d] uploadProc :: update error", __FILE__, __FUNCTION__, __LINE__);
+        trace(2, "[%s:%s:%d] uploadProc :: update error", 
+									__FILE__, __FUNCTION__, __LINE__);
         return 1;
     }
     return 0;

@@ -25,9 +25,11 @@ else
   rm -rf /data/*.bin
   # Set new IP
   if [ -e "/data/svm/current_ip" ]; then
-    IPADDR=192.168.168.`cat /data/svm/current_ip`
+    IPADDR=`cat /data/svm/current_ip`
     /sbin/ifconfig eth0 down
     /sbin/ifconfig eth0 inet $IPADDR netmask 255.255.255.0 up
+  else
+    /bin/cp /www/default_ip /data/svm/current_ip
   fi
   # Set new MAC
   if [ -e "/data/svm/current_mac" ]; then
@@ -64,6 +66,10 @@ else
     cp /www/stop_svm.sh /data/svm/www/
     chmod 777 /data/svm/www/stop_svm.sh
   fi
+  if [ ! -e "/data/svm/www/change_datetime.sh" ]; then
+    cp /www/change_datetime.sh /data/svm/www/
+    chmod 777 /data/svm/www/change_datetime.sh
+  fi
   if [ ! -e "/data/svm/www/update_firmware.sh" ]; then
     cp /www/update_firmware.sh /data/svm/www/
     chmod 777 /data/svm/www/update_firmware.sh
@@ -75,8 +81,8 @@ else
   if [ ! -e "/data/mtd-utils" ]; then
     cp -r /mtd-utils /data/
   fi
-  /usr/sbin/bacid 1>/dev/null 2>&1 &
-  /usr/sbin/bacmd 1>/dev/null 2>&1 &
+  # /usr/sbin/bacid 1>/dev/null 2>&1 &
+  # /usr/sbin/bacmd 1>/dev/null 2>&1 &
 
   while true; do
     svmresult=`ps | grep '/tools/svm' | grep -v grep`
@@ -86,6 +92,10 @@ else
         rm -rf /data/svm/m*.zip
       fi
       cd /data/svm 1>/dev/null 2>&1
+      # Secona would change the RTC device, 
+      # so we have to sync /dev/rtc0 by hwclock before start svm.
+      hwclock -w
+      sleep 1
       /tools/svm /data/svm/app.scode /data/svm/app.sab 1>/dev/null 2>&1 &
       cd - 1>/dev/null 2>&1
     fi
