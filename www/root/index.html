@@ -18,6 +18,8 @@ var system_filestatus = 1;
 var ip_address_status = 1;
 var mac_address_status = 1;
 
+var current_subpage = "";
+
 var checkApplicationFileName = function() {
     var fname = $("#application_filename")[0].innerText;
     if (!fname || fname.length == 0) {
@@ -74,237 +76,271 @@ var checkMACAddress = function() {
 
 var funs = {};
 funs["su"] = function() {
-    // 浏览
-    $("button#broswer").on("click", function(e){
-        $("div.widget-error-tips").css("display", "none");
-        $("#file").click();
-    });
-	// 应用程序升级
-    $("button#upgrade").on("click", function(e){
-        if (application_filestatus == 0)
+    // alert("AAAAA");
+    // onClick
+    if(current_subpage == "pages/ip_address_setting.html")
+    {
+        $("div.loading-container#loading-container").css("display", "block");
+        // 获取IP地址
+        $.get("/action/status?mode=get_ipconfig", function(_data, _status){
+            // alert("get_ipconfig = " + _data);
+            $("div.loading-container#loading-container").css("display", "none");
+            $("#new_ip_address").attr("value", _data);
+        });
+    }
+    else if(current_subpage == "pages/mac_address_setting.html")
+    {
+        $("div.loading-container#loading-container").css("display", "block");
+        // 获取MAC地址设定
+        $.get("/action/status?mode=get_macconfig", function(_data, _status){
+            // alert("get_macconfig = " + _data);
+            $("div.loading-container#loading-container").css("display", "none");
+            $("#new_mac_address").attr("value", _data);
+        });
+    }
+    else if((current_subpage == "pages/application_upgrade.html")
+        ||(current_subpage == "pages/system_upgrade.html"))
+    {
+        $("div.loading-container#loading-container").css("display", "block");
+        // 当前版本 & 发布日期
+        $.get("/action/status?mode=init", function(_data, _status){
+            $("div.loading-container#loading-container").css("display", "none");
+            var data_json = JSON.parse(_data);
+            alert(data_json);
+            $.each(data_json, function(index, info){
+                // if (info.version && $("#software_version").length > 0) {
+                if (index == "version") {
+                    // $("#software_version").attr("value", info.version);
+                    $("#software_version").attr("value", info);
+                }
+                // if (info.buildtime && $("#software_time").length > 0) {
+                else if (index == "buildtime") {
+                    var date = new Date(parseInt(info) * 1000);
+                    var dateStr = date.getFullYear() + '-' + 
+                        (date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '-' + 
+                        (date.getDate() < 10 ? '0' + date.getDate() : date.getDate()) + ' ' + 
+                        (date.getHours() < 10 ? '0' + date.getHours() : date.getHours()) + ':' + 
+                        (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()) + ':' + 
+                        (date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getSeconds());
+                    $("#software_time").attr("value", dateStr);
+                }
+                else if (index == "status") {
+                    $("#software_status").attr("value", info);
+                }
+                else if (index == "uboot") {
+                    $("#uboot_version").attr("value", info);
+                }
+                else if (index == "kernel") {
+                    $("#kernel_version").attr("value", info);
+                }
+                else if (index == "machine") {
+                    $("#machine_name").attr("value", info);
+                }
+            });
+        });
+    }
+    else if(current_subpage == "pages/datetime_setting.html")
+    {
+        // Set date
+        var date = new Date();
+        var year = date.getFullYear();
+        var month = date.getMonth() + 1;
+        var day = date.getDate();
+        var dateValue = year;
+        if(parseInt(month) >= 10)
         {
-            $("#firmware-setting").submit();
-            $("#loading-text").html("上传中...");
-            $("div.loading-container#loading-container").css("display", "block");
-            $("div.mask#mask").css("display", "block");
-            var updateStatus = function() {
-				$("div.loading-container#loading-container").css("display", "none");
-				$("div.mask#mask").css("display", "none");
-				alert("升级成功");
-            };
-            var waitforUploadDone = function() {
-				setTimeout(updateStatus, 500);
-            }
-            $.get("/action/uploadProc?mode=upload", function(_data, _status){});
-            waitforUploadDone();
+            dateValue = dateValue + "-" + month;
         }
-		else if (system_filestatus == 0)
+        else 
         {
-            $("#firmware-setting").submit();
-            $("#loading-text").html("上传中...");
-            $("div.loading-container#loading-container").css("display", "block");
-            $("div.mask#mask").css("display", "block");
-            var updateStatus = function() {
-				$("div.loading-container#loading-container").css("display", "none");
-				$("div.mask#mask").css("display", "none");
-				alert("升级成功");
-            };
-            var waitforUploadDone = function() {
-				setTimeout(updateStatus, 500);
-            }
-            $.get("/action/uploadProc?mode=upload", function(_data, _status){});
-            waitforUploadDone();
+            dateValue = dateValue + "-0" + month;
         }
-        else // if (application_filestatus == 1)
+        if(parseInt(day) >= 10)
         {
-            $("div.error-tips-content").html("请选择一个文件");
-            $("div.widget-error-tips").css("display", "block");
+            dateValue = dateValue + "-" + day;
         }
-    });
-	// IP设置
-    $("button#set_ipaddress").on("click", function(e){
-		checkIPAddress();
-        if (ip_address_status == 0)
+        else 
         {
-			var ip_address = $("#new_ip_address")[0].value;
-			// alert("click::ip_address = " + ip_address);
-			$("div.widget-error-tips").css("display", "none");
-			// 
-            $("#loading-text").html("修改中...");
-            $("div.loading-container#loading-container").css("display", "block");
-            $("div.mask#mask").css("display", "block");
-            var updateIPAddress = function() {
-				$("div.loading-container#loading-container").css("display", "none");
-				$("div.mask#mask").css("display", "none");
-				alert("设置成功");
-				// self.location='http://192.168.168.' + ip_address;
-				self.location='http://' + ip_address;
-            };
-            var waitforIPSetDone = function() {
-				setTimeout(updateIPAddress, 2000);
-            }
-            $.get("/action/status?mode=set_ipaddress&value=" + ip_address, function(_data, _status){});
-            waitforIPSetDone();
+            dateValue = dateValue + "-0" + day;
         }
-        else if (ip_address_status == 1)
-        {    
-			alert("ip_address_status = " + ip_address_status);
-            $("div.error-tips-content").html("IP地址格式错误");
-            $("div.widget-error-tips").css("display", "block");
-        }
-    });
-	// MAC设置
-    $("button#set_macaddress").on("click", function(e){
-        if (mac_address_status == 0)
+        $("#date_setting").attr("value", dateValue);
+        // alert("date_setting = " + dateValue);
+        // Set Time
+        var hour = date.getHours();
+        var minute = date.getMinutes();
+        // var second = date.getSeconds();
+        var timeValue = ""
+        if(parseInt(hour) >= 10)
         {
-			var mac_address = $("#new_mac_address")[0].value;
-			// alert("click::mac_address = " + mac_address);
-			$("div.widget-error-tips").css("display", "none");
-			// 
-            $("#loading-text").html("修改中...");
-            $("div.loading-container#loading-container").css("display", "block");
-            $("div.mask#mask").css("display", "block");
-            var updateMACAddress = function() {
-				$("div.loading-container#loading-container").css("display", "none");
-				$("div.mask#mask").css("display", "none");
-				alert("设置成功");
-				// self.location='http://192.168.168.' + ip_address;
-				location.reload(); 
-            };
-            var waitforMACSetDone = function() {
-				setTimeout(updateMACAddress, 2000);
-            }
-            $.get("/action/status?mode=set_macaddress&value=" + mac_address, function(_data, _status){});
-            waitforMACSetDone();
+            timeValue = hour;
         }
-        else if (mac_address_status == 1)
+        else 
         {
-			alert("mac_address_status = " + mac_address_status);
-            $("div.error-tips-content").html("MAC地址格式错误");
-            $("div.widget-error-tips").css("display", "block");
+            timeValue = "0" + hour;
         }
-    });
-	// 日期时间设置
-    $("button#set_datetime").on("click", function(e){
-		var date_str = $("#date_setting")[0].value;
-		var time_str = $("#time_setting")[0].value;
-		var datetime_str  = date_str.substr(5, 2);
-		    datetime_str += date_str.substr(8, 2); 
-		    datetime_str += time_str.substr(0, 2); 
-		    datetime_str += time_str.substr(3, 2); 
-			datetime_str += date_str.substr(0, 4);
-		alert("click::datetime_str = " + datetime_str);
-		
-		$("div.widget-error-tips").css("display", "none");
-		// 
-		$("#loading-text").html("设置中...");
-		$("div.loading-container#loading-container").css("display", "block");
-		$("div.mask#mask").css("display", "block");
-		var updateDatetime = function() {
-			$("div.loading-container#loading-container").css("display", "none");
-			$("div.mask#mask").css("display", "none");
-			alert("设置成功");
-			location.reload(); 
-		};
-		var waitforDatetimeSetDone = function() {
-			setTimeout(updateDatetime, 2000);
-		}
-		$.get("/action/status?mode=set_datetime&value=" + datetime_str, function(_data, _status){});
-		waitforDatetimeSetDone();
-    });
-	// 当前版本 & 发布日期
-    $.get("/action/status?mode=init", function(_data, _status){
-        var data_json = JSON.parse(_data);
-		// alert(data_json);
-        $.each(data_json, function(index, info){
-            // if (info.version && $("#software_version").length > 0) {
-            if (index == "version") {
-                // $("#software_version").attr("value", info.version);
-                $("#software_version").attr("value", info);
+        if(parseInt(minute) >= 10)
+        {
+            timeValue = timeValue + ":" + minute;
+        }
+        else 
+        {
+            timeValue = timeValue + ":0" + minute;
+        }
+        $("#time_setting").attr("value", timeValue);
+    }
+    // onClick
+    if((current_subpage == "pages/application_upgrade.html")
+        ||(current_subpage == "pages/system_upgrade.html"))
+    {
+        // 浏览
+        $("button#broswer").on("click", function(e){
+            $("div.widget-error-tips").css("display", "none");
+            $("#file").click();
+        });
+        // 应用程序升级
+        $("button#upgrade").on("click", function(e){
+            if (application_filestatus == 0)
+            {
+                $("#firmware-setting").submit();
+                $("#loading-text").html("上传中...");
+                $("div.loading-container#loading-container").css("display", "block");
+                $("div.mask#mask").css("display", "block");
+                var updateStatus = function() {
+                    $("div.loading-container#loading-container").css("display", "none");
+                    $("div.mask#mask").css("display", "none");
+                    alert("升级成功");
+                };
+                var waitforUploadDone = function() {
+                    setTimeout(updateStatus, 500);
+                }
+                $.get("/action/uploadProc?mode=upload", function(_data, _status){});
+                waitforUploadDone();
             }
-            // if (info.buildtime && $("#software_time").length > 0) {
-            else if (index == "buildtime") {
-                var date = new Date(parseInt(info) * 1000);
-                var dateStr = date.getFullYear() + '-' + 
-					(date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '-' + 
-					(date.getDate() < 10 ? '0' + date.getDate() : date.getDate()) + ' ' + 
-					(date.getHours() < 10 ? '0' + date.getHours() : date.getHours()) + ':' + 
-					(date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()) + ':' + 
-					(date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getSeconds());
-                $("#software_time").attr("value", dateStr);
+            else if (system_filestatus == 0)
+            {
+                $("#firmware-setting").submit();
+                $("#loading-text").html("上传中...");
+                $("div.loading-container#loading-container").css("display", "block");
+                $("div.mask#mask").css("display", "block");
+                var updateStatus = function() {
+                    $("div.loading-container#loading-container").css("display", "none");
+                    $("div.mask#mask").css("display", "none");
+                    alert("升级成功");
+                };
+                var waitforUploadDone = function() {
+                    setTimeout(updateStatus, 500);
+                }
+                $.get("/action/uploadProc?mode=upload", function(_data, _status){});
+                waitforUploadDone();
             }
-			else if (index == "status") {
-                $("#software_status").attr("value", info);
-            }
-			else if (index == "uboot") {
-                $("#uboot_version").attr("value", info);
-            }
-			else if (index == "kernel") {
-                $("#kernel_version").attr("value", info);
-            }
-			else if (index == "machine") {
-                $("#machine_name").attr("value", info);
+            else // if (application_filestatus == 1)
+            {
+                $("div.error-tips-content").html("请选择一个文件");
+                $("div.widget-error-tips").css("display", "block");
             }
         });
-    });
-	// 获取IP地址
-    $.get("/action/status?mode=get_ipconfig", function(_data, _status){
-		// alert("get_ipconfig = " + _data);
-		$("#new_ip_address").attr("value", _data);
-    });
-	// 获取MAC地址设定
-    $.get("/action/status?mode=get_macconfig", function(_data, _status){
-		// alert("get_macconfig = " + _data);
-		$("#new_mac_address").attr("value", _data);
-    });
-	
-	// Set date
-	var date = new Date();
-	var year = date.getFullYear();
-	var month = date.getMonth() + 1;
-	var day = date.getDate();
-	var dateValue = year;
-	if(parseInt(month) >= 10)
-	{
-		dateValue = dateValue + "-" + month;
-	}
-	else 
-	{
-		dateValue = dateValue + "-0" + month;
-	}
-	if(parseInt(day) >= 10)
-	{
-		dateValue = dateValue + "-" + day;
-	}
-	else 
-	{
-		dateValue = dateValue + "-0" + day;
-	}
-	$("#date_setting").attr("value", dateValue);
-	// alert("date_setting = " + dateValue);
-	// Set Time
-	var hour = date.getHours();
-	var minute = date.getMinutes();
-	// var second = date.getSeconds();
-	var timeValue = ""
-	if(parseInt(hour) >= 10)
-	{
-		timeValue = hour;
-	}
-	else 
-	{
-		timeValue = "0" + hour;
-	}
-	if(parseInt(minute) >= 10)
-	{
-		timeValue = timeValue + ":" + minute;
-	}
-	else 
-	{
-		timeValue = timeValue + ":0" + minute;
-	}
-	$("#time_setting").attr("value", timeValue);
-	
+    }
+    else if(current_subpage == "pages/ip_address_setting.html")
+    {
+        // IP设置
+        $("button#set_ipaddress").on("click", function(e){
+            checkIPAddress();
+            if (ip_address_status == 0)
+            {
+                var ip_address = $("#new_ip_address")[0].value;
+                // alert("click::ip_address = " + ip_address);
+                $("div.widget-error-tips").css("display", "none");
+                // 
+                $("#loading-text").html("修改中...");
+                $("div.loading-container#loading-container").css("display", "block");
+                $("div.mask#mask").css("display", "block");
+                var updateIPAddress = function() {
+                    $("div.loading-container#loading-container").css("display", "none");
+                    $("div.mask#mask").css("display", "none");
+                    alert("设置成功");
+                    // self.location='http://192.168.168.' + ip_address;
+                    self.location='http://' + ip_address;
+                };
+                var waitforIPSetDone = function() {
+                    setTimeout(updateIPAddress, 2000);
+                }
+                $.get("/action/status?mode=set_ipaddress&value=" + ip_address, function(_data, _status){});
+                waitforIPSetDone();
+            }
+            else if (ip_address_status == 1)
+            {    
+                alert("ip_address_status = " + ip_address_status);
+                $("div.error-tips-content").html("IP地址格式错误");
+                $("div.widget-error-tips").css("display", "block");
+            }
+        });
+    }
+    else if(current_subpage == "pages/mac_address_setting.html")
+    {
+        // MAC设置
+        $("button#set_macaddress").on("click", function(e){
+            if (mac_address_status == 0)
+            {
+                var mac_address = $("#new_mac_address")[0].value;
+                // alert("click::mac_address = " + mac_address);
+                $("div.widget-error-tips").css("display", "none");
+                // 
+                $("#loading-text").html("修改中...");
+                $("div.loading-container#loading-container").css("display", "block");
+                $("div.mask#mask").css("display", "block");
+                var updateMACAddress = function() {
+                    $("div.loading-container#loading-container").css("display", "none");
+                    $("div.mask#mask").css("display", "none");
+                    alert("设置成功");
+                    // self.location='http://192.168.168.' + ip_address;
+                    location.reload(); 
+                };
+                var waitforMACSetDone = function() {
+                    setTimeout(updateMACAddress, 2000);
+                }
+                $.get("/action/status?mode=set_macaddress&value=" + mac_address, function(_data, _status){});
+                waitforMACSetDone();
+            }
+            else if (mac_address_status == 1)
+            {
+                alert("mac_address_status = " + mac_address_status);
+                $("div.error-tips-content").html("MAC地址格式错误");
+                $("div.widget-error-tips").css("display", "block");
+            }
+        });
+    }
+    else if(current_subpage == "pages/datetime_setting.html")
+    {
+        // 日期时间设置
+        $("button#set_datetime").on("click", function(e){
+            var date_str = $("#date_setting")[0].value;
+            var time_str = $("#time_setting")[0].value;
+            var datetime_str  = date_str.substr(5, 2);
+                datetime_str += date_str.substr(8, 2); 
+                datetime_str += time_str.substr(0, 2); 
+                datetime_str += time_str.substr(3, 2); 
+                datetime_str += date_str.substr(0, 4);
+            alert("click::datetime_str = " + datetime_str);
+            
+            $("div.widget-error-tips").css("display", "none");
+            // 
+            $("#loading-text").html("设置中...");
+            $("div.loading-container#loading-container").css("display", "block");
+            $("div.mask#mask").css("display", "block");
+            var updateDatetime = function() {
+                $("div.loading-container#loading-container").css("display", "none");
+                $("div.mask#mask").css("display", "none");
+                alert("设置成功");
+                location.reload(); 
+            };
+            var waitforDatetimeSetDone = function() {
+                setTimeout(updateDatetime, 2000);
+            }
+            $.get("/action/status?mode=set_datetime&value=" + datetime_str, function(_data, _status){});
+            waitforDatetimeSetDone();
+        });	
+    }
+    // alert("BBBBB");
 };
 var updateContent = function(url, fun) {
     var req = false;
@@ -342,6 +378,7 @@ $(document).ready(function(e){
             e.preventDefault();
             e.stopPropagation();
             var me = $(this), url = me.attr("ref-url"), fun = me.attr("ifun");
+            current_subpage = url;
             var fstMenuList = $("li.fst");
             $(fstMenuList).each(function(i, obj) {
                     var that = $(obj);
