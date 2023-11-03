@@ -16,4 +16,4 @@
 #       user name=joshua password=2fd6e47ff9bb70c0465fd2f5c8e5305e roles=manager,purchaser
 #
 role name=admin abilities=view,edit,delete
-user name=admin password=3db979d382188e79de9df11af193109b roles=admin
+user name=admin password=6eaf6e241082cb92213e8538717fe0bb roles=admin

@@ -76,7 +76,6 @@ var checkMACAddress = function() {
 
 var funs = {};
 funs["su"] = function() {
-    // alert("AAAAA");
     // onClick
     if(current_subpage == "pages/ip_address_setting.html")
     {
@@ -106,7 +105,7 @@ funs["su"] = function() {
         $.get("/action/status?mode=init", function(_data, _status){
             $("div.loading-container#loading-container").css("display", "none");
             var data_json = JSON.parse(_data);
-            alert(data_json);
+            alert("init::get_systeminfo = " + data_json);
             $.each(data_json, function(index, info){
                 // if (info.version && $("#software_version").length > 0) {
                 if (index == "version") {
@@ -116,6 +115,8 @@ funs["su"] = function() {
                 // if (info.buildtime && $("#software_time").length > 0) {
                 else if (index == "buildtime") {
                     var date = new Date(parseInt(info) * 1000);
+                    // Substract GMT+08:00
+                    date.setHours(date.getHours() - 8);
                     var dateStr = date.getFullYear() + '-' + 
                         (date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '-' + 
                         (date.getDate() < 10 ? '0' + date.getDate() : date.getDate()) + ' ' + 
@@ -135,6 +136,27 @@ funs["su"] = function() {
                 }
                 else if (index == "machine") {
                     $("#machine_name").attr("value", info);
+                }
+            });
+        });
+    }
+    else if(current_subpage == "pages/system_state.html")
+    {
+        $("div.loading-container#loading-container").css("display", "block");
+        // 当前版本 & 发布日期
+        $.get("/action/status?mode=get_systeminfo", function(_data, _status){
+            $("div.loading-container#loading-container").css("display", "none");
+            var data_json = JSON.parse(_data);
+            $.each(data_json, function(index, info){
+                // if (info.version && $("#software_version").length > 0) {
+                if (index == "cpuload") {
+                    $("#cpuload_info").attr("value", info);
+                }
+                else if (index == "mem") {
+                    $("#mem_info").attr("value", info);
+                }
+                else if (index == "svm") {
+                    $("#svm_info").attr("value", info);
                 }
             });
         });
@@ -187,6 +209,14 @@ funs["su"] = function() {
             timeValue = timeValue + ":0" + minute;
         }
         $("#time_setting").attr("value", timeValue);
+        alert("CCCCC");
+        $("div.loading-container#loading-container").css("display", "block");
+        // 获取MAC地址设定
+        $.get("/action/status?mode=get_date", function(_data, _status){
+            // alert("get_macconfig = " + _data);
+            $("div.loading-container#loading-container").css("display", "none");
+            $("#current_date").attr("value", _data);
+        });
     }
     // onClick
     if((current_subpage == "pages/application_upgrade.html")
@@ -371,6 +401,29 @@ var updateContent = function(url, fun) {
     } else {
         $("#func-advanced").html("Inner Error !");
     }
+    
+    // alert("updateContent = " + url);
+    if(url == "pages/system_state.html")
+    {
+        $("div.loading-container#loading-container").css("display", "block");
+        // 当前版本 & 发布日期
+        $.get("/action/status?mode=get_systeminfo", function(_data, _status){
+            $("div.loading-container#loading-container").css("display", "none");
+            var data_json = JSON.parse(_data);
+            $.each(data_json, function(index, info){
+                // if (info.version && $("#software_version").length > 0) {
+                if (index == "cpuload") {
+                    $("#cpuload_info").attr("value", info);
+                }
+                else if (index == "mem") {
+                    $("#mem_info").attr("value", info);
+                }
+                else if (index == "svm") {
+                    $("#svm_info").attr("value", info);
+                }
+            });
+        });
+    }
 };
 $(document).ready(function(e){
     var container = $("div#menu-advanced");
@@ -378,6 +431,7 @@ $(document).ready(function(e){
             e.preventDefault();
             e.stopPropagation();
             var me = $(this), url = me.attr("ref-url"), fun = me.attr("ifun");
+            // alert("url:" + url);
             current_subpage = url;
             var fstMenuList = $("li.fst");
             $(fstMenuList).each(function(i, obj) {
@@ -445,7 +499,7 @@ $(document).ready(function(e){
 					<li class="fst " id="menu-advanced-running-status-li">
 					     <a class="fst none-sec" data-child="no" 
 						    data-name="running-status" name="running-status" tab-id="tab-menu-ul-1010746721" 
-							ref-url="pages/system_state.html" ifun="ss"><span class="icon">
+							ref-url="pages/system_state.html" ifun="su"><span class="icon">
 							   </span><span class="text">运行状态</span>
 						 </a>
 					</li>

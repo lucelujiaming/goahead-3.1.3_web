@@ -74,6 +74,10 @@ else
     cp /www/update_firmware.sh /data/svm/www/
     chmod 777 /data/svm/www/update_firmware.sh
   fi
+  if [ ! -e "/data/svm/www/outout_sysinfo.sh" ]; then
+    cp /www/outout_sysinfo.sh /data/svm/www/
+    chmod 777 /data/svm/www/outout_sysinfo.sh
+  fi
   /bin/goahead --verbose --home /www > /data/svm/goahead_output.log &
   # Add stupid-ftpd as ftp server 
   /sbin/stupid-ftpd.Linux6 -f /etc/stupid-ftpd.conf
@@ -83,7 +87,7 @@ else
   fi
   # /usr/sbin/bacid 1>/dev/null 2>&1 &
   # /usr/sbin/bacmd 1>/dev/null 2>&1 &
-
+  top_count=0
   while true; do
     svmresult=`ps | grep '/tools/svm' | grep -v grep`
     if [ -z "$svmresult" ]; then
@@ -92,13 +96,27 @@ else
         rm -rf /data/svm/m*.zip
       fi
       cd /data/svm 1>/dev/null 2>&1
+      # Print date and hwclock. 
+      echo -n "Soft Clock : " && date && echo -n "Hard Clock : " && hwclock
       # Secona would change the RTC device, 
       # so we have to sync /dev/rtc0 by hwclock before start svm.
       hwclock -w
       sleep 1
       /tools/svm /data/svm/app.scode /data/svm/app.sab 1>/dev/null 2>&1 &
       cd - 1>/dev/null 2>&1
+      # The svm does not always run successfully
+      echo -n "Not Running" > /data/svm/svm_info.txt
+    else
+      echo -n "Running" > /data/svm/svm_info.txt
     fi
+    # Output top info
+    if [ $top_count -gt 9 ]; then                         
+        # top -b -n 1 -d 0 | head -2 > /data/svm/top_output.txt
+        /data/svm/www/outout_sysinfo.sh &
+        top_count=0
+    fi
+    top_count=`expr $top_count + 1`
+    # end of Output top info 
     sleep 1
   done
 fi
