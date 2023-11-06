@@ -248,7 +248,7 @@ void statusProc(Webs *wp)
     char *pMode;
     char *pValue;
     int   iValue;
-    char info_str[1024];
+    char info_str[1024] = { 0 };
 
     pMode = websGetVar(wp, "mode", "");
     trace(2, "[%s:%s:%d] statusProc::pVal = %s", __FILE__, __FUNCTION__, __LINE__, pMode);
@@ -258,7 +258,11 @@ void statusProc(Webs *wp)
         ret_str = initProc();
         if(ret_str)
         {
+            websSetStatus(wp, 200);
+            websWriteHeaders(wp, -1, 0);
+            websWriteEndHeaders(wp);
             websWrite(wp, ret_str);
+            websFlush(wp);
             free(ret_str);
         }
         websDone(wp);
@@ -292,33 +296,69 @@ void statusProc(Webs *wp)
         websDone(wp);
 		// Secona would change the RTC device, 
 		// so we have to stop svm and use /etc/rc.d/rc.svm to sync /dev/rtc0.
-        memset(info_str, 0x00, 1024);
         sprintf(info_str, "/data/svm/www/change_datetime.sh %s &", pValue);
         system(info_str);
     }
     else if(strcmp(pMode, "get_ipconfig") == 0)
     {
-        memset(info_str, 0x00, 1024);
         get_cmd_printf("cat /data/svm/current_ip", info_str, 1024);
         // Use default value
         if(strlen(info_str) == 0)
         {
             strcpy(info_str, "2");
         }
+        websSetStatus(wp, 200);
+        websWriteHeaders(wp, -1, 0);
+        websWriteEndHeaders(wp);
         websWrite(wp, info_str);
+        websFlush(wp);
         websDone(wp);
     }
     else if(strcmp(pMode, "get_macconfig") == 0)
     {
-        memset(info_str, 0x00, 1024);
         get_cmd_printf("cat /data/svm/current_mac", info_str, 1024);
+        websSetStatus(wp, 200);
+        websWriteHeaders(wp, -1, 0);
+        websWriteEndHeaders(wp);
         websWrite(wp, info_str);
+        websFlush(wp);
+        websDone(wp);
+    }
+    else if(strcmp(pMode, "get_date") == 0)
+    {
+        get_cmd_printf("date +'%G/%m/%d %H:%M:%S'", info_str, 1024);
+        websSetStatus(wp, 200);
+        websWriteHeaders(wp, -1, 0);
+        websWriteEndHeaders(wp);
+        websWrite(wp, info_str);
+        websFlush(wp);
+        websDone(wp);
+    }
+    else if(strcmp(pMode, "get_systeminfo") == 0)
+    {
+	    char cpuload_string[APP_PATH_LEN] = "";
+	    char mem_string[APP_PATH_LEN] = "";
+	    char svm_string[APP_PATH_LEN] = "";
+		
+        get_cmd_printf("cat /data/svm/board_cpuloadinfo.txt", cpuload_string, APP_PATH_LEN);
+        get_cmd_printf("cat /data/svm/board_meminfo.txt", mem_string, APP_PATH_LEN);
+        get_cmd_printf("cat /data/svm/svm_info.txt", svm_string, APP_PATH_LEN);
+		
+        sprintf(info_str, "{ \"svm\": \"%s\", \"cpuload\": \"%s\", \"mem\": \"%s\" }", 
+           svm_string, cpuload_string, mem_string);
+        websSetStatus(wp, 200);
+        websWriteHeaders(wp, -1, 0);
+        websWriteEndHeaders(wp);
+        websWrite(wp, info_str);
+        websFlush(wp);
         websDone(wp);
     }
     else
     {
         websDone(wp);
     }
+    trace(2, "%ld - [%s:%s:%d] websWrite::info_str = %s", 
+    	              time(NULL), __FILE__, __FUNCTION__, __LINE__, info_str);
 }
 
 void sumbitProc(Webs *wp)
@@ -590,7 +630,11 @@ void uploadProc(Webs *wp)
     char info_str[1024];
     int iRet = check_uploadfile(wp);
     sprintf(info_str, "%d", iRet);
+    websSetStatus(wp, 200);
+    websWriteHeaders(wp, -1, 0);
+    websWriteEndHeaders(wp);
     websWrite(wp, info_str);
+    websFlush(wp);
     websDone(wp);
 }
 
@@ -599,7 +643,11 @@ void upgradeProc(Webs *wp)
     char info_str[1024];
     int iRet = check_uploadfile(wp);
     sprintf(info_str, "%d", iRet);
+    websSetStatus(wp, 200);
+    websWriteHeaders(wp, -1, 0);
+    websWriteEndHeaders(wp);
     websWrite(wp, info_str);
+    websFlush(wp);
     websDone(wp);
 }
 
