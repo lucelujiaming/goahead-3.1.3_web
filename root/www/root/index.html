@@ -295,6 +295,7 @@ funs["su"] = function() {
                 var waitforIPSetDone = function() {
                     setTimeout(updateIPAddress, 2000);
                 }
+                // Do submit job
                 $.get("/action/status?mode=set_ipaddress&value=" + ip_address, function(_data, _status){});
                 waitforIPSetDone();
             }
@@ -329,6 +330,7 @@ funs["su"] = function() {
                 var waitforMACSetDone = function() {
                     setTimeout(updateMACAddress, 2000);
                 }
+                // Do submit job
                 $.get("/action/status?mode=set_macaddress&value=" + mac_address, function(_data, _status){});
                 waitforMACSetDone();
             }
